@@ -1,14 +1,17 @@
 package org.apache.lucene.codecs.embeddeddb;
 
 import java.io.File;
-import java.nio.file.Files;
 
+import com.sleepycat.bind.EntryBinding;
+import com.sleepycat.bind.serial.SerialBinding;
 import com.sleepycat.bind.serial.StoredClassCatalog;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
+import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.LockMode;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -30,19 +33,21 @@ import com.sleepycat.je.EnvironmentConfig;
 /**
  * Created by rlmathes on 7/15/17.
  */
-public enum SegmentStore {
+public enum EmbeddedDBStore {
 
     INSTANCE;
 
     private EnvironmentConfig environmentConfig;
     private Environment environment;
     private DatabaseConfig databaseConfig;
-    private Database segmentStoreDatabase;
+    private Database documentStoreDatabase;
     private StoredClassCatalog storedClassCatalog;
+    private EntryBinding documentDataBinding;
+    private EntryBinding documentKeyBinding;
     private final String PATH_EMBEDDEDDB_STORE = "/Users/rlmathes/_temp/luceneStore"; //TODO: Integrate w/ config
-    private final String DBNAME_SEGMENT_STORE = "segment_store";
+    private final String DBNAME_DOCUMENT_STORE = "doc_store";
 
-    SegmentStore() {
+    EmbeddedDBStore() {
 
         environmentConfig = new EnvironmentConfig();
         environmentConfig.setAllowCreate(true);
@@ -61,26 +66,62 @@ public enum SegmentStore {
             //LOGIT: Error occurred creating the embedded database environment
         }
 
+        initializeDatabases();
+    }
+
+
+    private void initializeDatabases() {
         databaseConfig = new DatabaseConfig();
         databaseConfig.setAllowCreate(true);
         try {
-            segmentStoreDatabase = environment.openDatabase(null, DBNAME_SEGMENT_STORE, databaseConfig);
-            storedClassCatalog = new StoredClassCatalog(segmentStoreDatabase);
+            documentStoreDatabase = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
+            storedClassCatalog = new StoredClassCatalog(documentStoreDatabase);
         } catch (DatabaseException e) {
             //LOGIT: Failed to access the requested database from the environment
-            e.printStackTrace();
         }
+
+        documentKeyBinding = new SerialBinding(storedClassCatalog, DocumentKey.class);
+        documentDataBinding = new SerialBinding(storedClassCatalog, DocumentData.class);
     }
 
 
-    public Database getStore() {
-        return segmentStoreDatabase;
+    Database getStore() {
+        return documentStoreDatabase;
     }
 
 
+    public void put(final DocumentKey key, final DocumentData data) {
+        DatabaseEntry entryKey = new DatabaseEntry();
+        DatabaseEntry entryData = new DatabaseEntry();
+        documentKeyBinding.objectToEntry(key, entryKey);
+        documentDataBinding.objectToEntry(data, entryData);
+        try {
+            documentStoreDatabase.put(null, entryKey, entryData);
+        } catch (DatabaseException e) {
+            e.printStackTrace();
+            //LOGIT
+        }
+
+    }
 
 
+    public DocumentData get(final DocumentKey key) {
 
+        DatabaseEntry entryKey = new DatabaseEntry();
+        DatabaseEntry entryData = new DatabaseEntry();
+        DocumentData data = new DocumentData();
+        documentKeyBinding.objectToEntry(key, entryKey);
+        documentDataBinding.objectToEntry(data, entryData);
+
+        try {
+            documentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
+            data = (DocumentData) documentDataBinding.entryToObject(entryData);
+        } catch (DatabaseException e) {
+            //LOGIT
+        }
+
+        return data;
+    }
 
 
 }

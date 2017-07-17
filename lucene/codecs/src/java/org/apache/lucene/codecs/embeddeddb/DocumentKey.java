@@ -17,8 +17,21 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
+import java.io.Serializable;
+
 /**
- * Created by rlmathes on 7/15/17.
+ * Created by rlmathes on 7/16/17.
  */
-public class SegmentData {
+public class DocumentKey implements Serializable{
+
+    private int ID;
+
+    public DocumentKey(final int ID) {
+        this.ID = ID;
+    }
+
+    public int getID() {
+        return ID;
+    }
+
 }

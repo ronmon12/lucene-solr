@@ -17,9 +17,9 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
-import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.FilterCodec;
 import org.apache.lucene.codecs.StoredFieldsFormat;
+import org.apache.lucene.codecs.lucene410.Lucene410Codec;
 
 /**
  * Created by rlmathes on 7/15/17.
@@ -27,16 +27,9 @@ import org.apache.lucene.codecs.StoredFieldsFormat;
 public class EmbeddedDBCodec extends FilterCodec {
 
     private final StoredFieldsFormat storedFields = new EmbeddedDBStoredFieldsFormat();
-    /**
-     * Sole constructor. When subclassing this codec,
-     * create a no-arg ctor and pass the delegate codec
-     * and a unique name to this ctor.
-     *
-     * @param name
-     * @param delegate
-     */
-    protected EmbeddedDBCodec(String name, Codec delegate) {
-        super(name, delegate);
+
+    public EmbeddedDBCodec() {
+        super("EmbeddedDB", new Lucene410Codec());
     }
 
     @Override

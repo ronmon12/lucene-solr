@@ -17,8 +17,25 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * Created by rlmathes on 7/15/17.
+ * Created by rlmathes on 7/16/17.
  */
-public class SegmentKey {
+public class DocumentData implements Serializable {
+
+
+    private List<String> fields = new ArrayList<>();
+
+    public void addField(final String fieldName) {
+        fields.add(fieldName);
+    }
+
+    public List<String> getFields() {
+        return fields;
+    }
+
+
 }

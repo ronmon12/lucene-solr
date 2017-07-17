@@ -17,20 +17,41 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
+import javax.print.Doc;
+
+import java.util.List;
+
 import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseException;
+import org.apache.lucene.document.Document;
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
  * Created by rlmathes on 7/16/17.
  */
-public class TestSegmentStore {
+public class TestEmbeddedDBStore {
+
     @Test
     public void getStore() throws Exception {
 
-        Database store = SegmentStore.INSTANCE.getStore();
+        Database store = EmbeddedDBStore.INSTANCE.getStore();
         Assert.assertEquals("segment_store", store.getDatabaseName());
+    }
 
+    @Test
+    public void put() {
+
+        DocumentKey key = new DocumentKey(1);
+        DocumentData data = new DocumentData();
+        data.addField("testField");
+
+        EmbeddedDBStore.INSTANCE.put(key, data);
+        Database store = EmbeddedDBStore.INSTANCE.getStore();
+
+        List<String> fields = EmbeddedDBStore.INSTANCE.get(key).getFields();
+
+        Assert.assertEquals("testField", fields.get(0));
     }
 
 }

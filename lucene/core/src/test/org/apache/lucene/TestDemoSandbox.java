@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.MockAnalyzer;
+import org.apache.lucene.codecs.embeddeddb.EmbeddedDBCodec;
 import org.apache.lucene.codecs.simpletext.SimpleTextCodec;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -54,7 +55,8 @@ public class TestDemoSandbox extends LuceneTestCase {
     Directory directory = new SimpleFSDirectory(file, new SimpleFSLockFactory());
 
     IndexWriterConfig config = new IndexWriterConfig(Version.LATEST, analyzer);
-    config.setCodec(new SimpleTextCodec());
+    //config.setCodec(new SimpleTextCodec());
+    config.setCodec(new EmbeddedDBCodec());
     IndexWriter iwriter = new IndexWriter(directory, config);
     Document doc = new Document();
     String longTerm = "longtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongterm";

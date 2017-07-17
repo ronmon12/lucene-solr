@@ -31,6 +31,9 @@ import org.apache.lucene.store.IOContext;
  */
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
+    private DocumentData currentDocument;
+    private int currentKey = 0;
+
     public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
 
     }
@@ -38,10 +41,21 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
     @Override
     public void startDocument() throws IOException {
 
+        currentDocument = new DocumentData();
+    }
+
+    @Override
+    public void finishDocument() throws IOException {
+
+        DocumentKey key = new DocumentKey(currentKey);
+        currentKey++;
+        EmbeddedDBStore.INSTANCE.put(key, currentDocument);
     }
 
     @Override
     public void writeField(FieldInfo info, IndexableField field) throws IOException {
+
+        currentDocument.addField(field.stringValue());
 
     }
 
