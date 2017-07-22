@@ -17,25 +17,21 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
+
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * Created by rlmathes on 7/16/17.
+ * Created by rlmathes on 7/21/17.
  */
-public class DocumentData implements Serializable {
+public class EDBStoredField implements Serializable {
 
+    public String name;
 
-    private List<String> fields = new ArrayList<>();
+    public byte[] binaryValue;
 
-    public void addField(final String fieldName) {
-        fields.add(fieldName);
-    }
+    /** Non-null if this field has a string value */
+    public String stringValue;
 
-    public List<String> getFields() {
-        return fields;
-    }
-
-
+    /** Non-null if this field has a numeric value */
+    public Number numericValue;
 }

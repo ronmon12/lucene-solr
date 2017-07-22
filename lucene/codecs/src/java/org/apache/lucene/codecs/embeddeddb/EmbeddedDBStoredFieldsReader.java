@@ -20,6 +20,7 @@ package org.apache.lucene.codecs.embeddeddb;
 import java.io.IOException;
 
 import org.apache.lucene.codecs.StoredFieldsReader;
+import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.SegmentInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
@@ -31,18 +32,61 @@ import org.apache.lucene.store.IOContext;
  */
 public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
+    private Directory directory;
+    private SegmentInfo si;
+    private FieldInfos fn;
+    private IOContext ioContext;
+    private SegmentData segmentData;
+
+
     public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) {
 
+        this.directory = directory;
+        this.si = si;
+        this.fn = fn;
+        this.ioContext = context;
+
+        SegmentKey segmentKey = new SegmentKey(si.name);
+        segmentData = EmbeddedDBStore.INSTANCE.get(segmentKey);
     }
 
     @Override
     public void visitDocument(int n, StoredFieldVisitor visitor) throws IOException {
 
+        EDBStoredDocument document = segmentData.getDocument(n);
+
+        for(EDBStoredField field : document.getFields()) {
+
+            FieldInfo info = this.fn.fieldInfo(field.name);
+            if(null != field.stringValue) {
+                visitor.stringField(info, field.stringValue);
+            }
+            else if(null != field.numericValue) {
+                Number number = field.numericValue;
+                if (number instanceof Integer) {
+                    visitor.intField(info, (Integer) field.numericValue);
+                } else if (number instanceof Long) {
+                    visitor.longField(info, (Long) field.numericValue);
+                } else if (number instanceof Float) {
+                    visitor.floatField(info, (Float) field.numericValue);
+                } else if (number instanceof Double) {
+                    visitor.doubleField(info, (Double) field.numericValue);
+                } else {
+                    throw new IllegalArgumentException("cannot store numeric type " + number.getClass());
+                }
+            }
+            else if(null != field.binaryValue) {
+                visitor.binaryField(info, field.binaryValue);
+            }
+        }
+
     }
 
     @Override
     public StoredFieldsReader clone() {
-        return null;
+        EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.fn, this.ioContext);
+        reader.setSegmentData(this.segmentData);
+        return reader;
     }
 
     @Override
@@ -58,5 +102,9 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     @Override
     public long ramBytesUsed() {
         return 0;
+    }
+
+    public void setSegmentData(SegmentData segmentData) {
+        this.segmentData = segmentData;
     }
 }

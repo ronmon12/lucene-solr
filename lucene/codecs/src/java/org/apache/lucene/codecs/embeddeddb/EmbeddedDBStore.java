@@ -40,12 +40,12 @@ public enum EmbeddedDBStore {
     private EnvironmentConfig environmentConfig;
     private Environment environment;
     private DatabaseConfig databaseConfig;
-    private Database documentStoreDatabase;
+    private Database segmentStoreDatabase;
     private StoredClassCatalog storedClassCatalog;
-    private EntryBinding documentDataBinding;
-    private EntryBinding documentKeyBinding;
+    private EntryBinding segmentDataBinding;
+    private EntryBinding segmentKeyBinding;
     private final String PATH_EMBEDDEDDB_STORE = "/Users/rlmathes/_temp/luceneStore"; //TODO: Integrate w/ config
-    private final String DBNAME_DOCUMENT_STORE = "doc_store";
+    private final String DBNAME_SEGMENT_STORE = "segment_store";
 
     EmbeddedDBStore() {
 
@@ -74,29 +74,29 @@ public enum EmbeddedDBStore {
         databaseConfig = new DatabaseConfig();
         databaseConfig.setAllowCreate(true);
         try {
-            documentStoreDatabase = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
-            storedClassCatalog = new StoredClassCatalog(documentStoreDatabase);
+            segmentStoreDatabase = environment.openDatabase(null, DBNAME_SEGMENT_STORE, databaseConfig);
+            storedClassCatalog = new StoredClassCatalog(segmentStoreDatabase);
         } catch (DatabaseException e) {
             //LOGIT: Failed to access the requested database from the environment
         }
 
-        documentKeyBinding = new SerialBinding(storedClassCatalog, DocumentKey.class);
-        documentDataBinding = new SerialBinding(storedClassCatalog, DocumentData.class);
+        segmentKeyBinding = new SerialBinding(storedClassCatalog, SegmentKey.class);
+        segmentDataBinding = new SerialBinding(storedClassCatalog, SegmentData.class);
     }
 
 
     Database getStore() {
-        return documentStoreDatabase;
+        return segmentStoreDatabase;
     }
 
 
-    public void put(final DocumentKey key, final DocumentData data) {
+    public void put(final SegmentKey key, final SegmentData data) {
         DatabaseEntry entryKey = new DatabaseEntry();
         DatabaseEntry entryData = new DatabaseEntry();
-        documentKeyBinding.objectToEntry(key, entryKey);
-        documentDataBinding.objectToEntry(data, entryData);
+        segmentKeyBinding.objectToEntry(key, entryKey);
+        segmentDataBinding.objectToEntry(data, entryData);
         try {
-            documentStoreDatabase.put(null, entryKey, entryData);
+            segmentStoreDatabase.put(null, entryKey, entryData);
         } catch (DatabaseException e) {
             e.printStackTrace();
             //LOGIT
@@ -105,17 +105,17 @@ public enum EmbeddedDBStore {
     }
 
 
-    public DocumentData get(final DocumentKey key) {
+    public SegmentData get(final SegmentKey key) {
 
         DatabaseEntry entryKey = new DatabaseEntry();
         DatabaseEntry entryData = new DatabaseEntry();
-        DocumentData data = new DocumentData();
-        documentKeyBinding.objectToEntry(key, entryKey);
-        documentDataBinding.objectToEntry(data, entryData);
+        SegmentData data = new SegmentData();
+        segmentKeyBinding.objectToEntry(key, entryKey);
+        segmentDataBinding.objectToEntry(data, entryData);
 
         try {
-            documentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
-            data = (DocumentData) documentDataBinding.entryToObject(entryData);
+            segmentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
+            data = (SegmentData) segmentDataBinding.entryToObject(entryData);
         } catch (DatabaseException e) {
             //LOGIT
         }

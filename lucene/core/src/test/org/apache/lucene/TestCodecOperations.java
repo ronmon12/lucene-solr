@@ -19,10 +19,14 @@ package org.apache.lucene;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.codecs.embeddeddb.EmbeddedDBCodec;
+import org.apache.lucene.codecs.lucene410.Lucene410Codec;
 import org.apache.lucene.codecs.simpletext.SimpleTextCodec;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -30,6 +34,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PhraseQuery;
@@ -41,22 +46,71 @@ import org.apache.lucene.store.SimpleFSDirectory;
 import org.apache.lucene.store.SimpleFSLockFactory;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.Version;
+import org.junit.Assert;
+import org.junit.Before;
 
 /**
  *
  * Simple test for experimenting indexing with different codecs and directories
  *
  */
-public class TestDemoSandbox extends LuceneTestCase {
+public class TestCodecOperations extends LuceneTestCase {
 
-  public void testDemo() throws IOException {
+  private String TEST_WRITES_AND_READS_DIRECTORY = "/Users/rlmathes/_temp/lucene_storage/testWritesAndReads";
+
+  public void testWritesAndReads() throws IOException {
+
+    List<Document> inputDocuments = new ArrayList<>();
+    Document docOne = new Document();
+    docOne.add(newTextField("contents", "car, truck, van", Field.Store.YES));
+    Document docTwo = new Document();
+    docTwo.add(newTextField("contents", "car, car, van", Field.Store.YES));
+    Document docThree = new Document();
+    docThree.add(newTextField("contents", "car, van, van", Field.Store.YES));
+    inputDocuments.add(docOne);
+    inputDocuments.add(docTwo);
+    inputDocuments.add(docThree);
+
     Analyzer analyzer = new MockAnalyzer(random());
-    File file = new File("/Users/rlmathes/_temp");
+    File file = new File(TEST_WRITES_AND_READS_DIRECTORY);
     Directory directory = new SimpleFSDirectory(file, new SimpleFSLockFactory());
 
     IndexWriterConfig config = new IndexWriterConfig(Version.LATEST, analyzer);
+    //config.setCodec(new Lucene410Codec());
+    config.setCodec(new EmbeddedDBCodec());
+    IndexWriter indexWriter = new IndexWriter(directory, config);
+    indexWriter.addDocuments(inputDocuments);
+    indexWriter.close();
+
+    IndexReader indexReader = DirectoryReader.open(directory);
+    List<Document> readDocuments = new ArrayList<>();
+    for(int i = 0; i < indexReader.numDocs(); i++) {
+      readDocuments.add(indexReader.document(i));
+    }
+    indexReader.close();
+
+    Assert.assertTrue(readDocuments.size() == 3);
+    for(int i = 0; i < inputDocuments.size(); i++) {
+      String inputContents = inputDocuments.get(i).getField("contents").stringValue();
+      String readContents = readDocuments.get(i).getField("contents").stringValue();
+      assertEquals(inputContents, readContents);
+    }
+
+    directory.close();
+  }
+
+
+
+
+  public void testDemo() throws IOException {
+    Analyzer analyzer = new MockAnalyzer(random());
+    File file = new File("/Users/rlmathes/_temp/lucene_storage/testDemo");
+    Directory directory = new SimpleFSDirectory(file, new SimpleFSLockFactory());
+    IndexWriterConfig config = new IndexWriterConfig(Version.LATEST, analyzer);
     //config.setCodec(new SimpleTextCodec());
     config.setCodec(new EmbeddedDBCodec());
+
+    //Write the index
     IndexWriter iwriter = new IndexWriter(directory, config);
     Document doc = new Document();
     String longTerm = "longtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongterm";
@@ -65,14 +119,14 @@ public class TestDemoSandbox extends LuceneTestCase {
     iwriter.addDocument(doc);
     iwriter.close();
     
-    // Now search the index:
+    //Search the index
     IndexReader ireader = DirectoryReader.open(directory); // read-only=true
     IndexSearcher isearcher = newSearcher(ireader);
-
     assertEquals(1, isearcher.search(new TermQuery(new Term("fieldname", longTerm)), 1).totalHits);
     Query query = new TermQuery(new Term("fieldname", "text"));
     TopDocs hits = isearcher.search(query, null, 1);
     assertEquals(1, hits.totalHits);
+
     // Iterate through the results:
     for (int i = 0; i < hits.scoreDocs.length; i++) {
       Document hitDoc = isearcher.doc(hits.scoreDocs[i].doc);

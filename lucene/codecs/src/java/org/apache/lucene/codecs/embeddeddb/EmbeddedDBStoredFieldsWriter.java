@@ -31,32 +31,47 @@ import org.apache.lucene.store.IOContext;
  */
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
-    private DocumentData currentDocument;
-    private int currentKey = 0;
+    private SegmentKey segmentKey;
+    private SegmentData segmentData;
+    private EDBStoredDocument currentEDBStoredDocument;
+    private int currentDocumentKey = 0;
 
     public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
 
+        segmentKey = new SegmentKey(segment);
+        segmentData = new SegmentData();
+        EmbeddedDBStore.INSTANCE.put(segmentKey, segmentData);
     }
 
     @Override
     public void startDocument() throws IOException {
-
-        currentDocument = new DocumentData();
+        currentEDBStoredDocument = new EDBStoredDocument();
     }
 
     @Override
     public void finishDocument() throws IOException {
 
-        DocumentKey key = new DocumentKey(currentKey);
-        currentKey++;
-        EmbeddedDBStore.INSTANCE.put(key, currentDocument);
+        segmentData.putDocument(currentDocumentKey, currentEDBStoredDocument);
+        EmbeddedDBStore.INSTANCE.put(segmentKey, segmentData);
+        currentDocumentKey++;
     }
 
     @Override
     public void writeField(FieldInfo info, IndexableField field) throws IOException {
 
-        currentDocument.addField(field.stringValue());
+        EDBStoredField EDBStoredField = new EDBStoredField();
+        EDBStoredField.name = field.name();
 
+        if(null != field.stringValue()) {
+            EDBStoredField.stringValue = field.stringValue();
+        }
+        else if(null != field.numericValue()) {
+            EDBStoredField.numericValue = field.numericValue();
+        }
+        else if(null != field.binaryValue()) {
+            EDBStoredField.binaryValue = field.binaryValue().bytes;
+        }
+        currentEDBStoredDocument.addField(EDBStoredField);
     }
 
     @Override
@@ -72,5 +87,7 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
     @Override
     public void close() throws IOException {
 
+        segmentKey = null;
+        currentEDBStoredDocument = null;
     }
 }
