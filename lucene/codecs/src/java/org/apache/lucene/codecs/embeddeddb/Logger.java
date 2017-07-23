@@ -17,23 +17,12 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
-
-import java.io.Serializable;
-
 /**
- * Created by rlmathes on 7/21/17.
+ * Created by rlmathes on 7/22/17.
  */
-public class EDBStoredField implements Serializable {
+public class Logger {
 
-    public String name;
-
-    public byte[] binaryValue;
-
-    public int offset;
-
-    public int length;
-
-    public String stringValue;
-
-    public Number numericValue;
+    public static void LOG(final LogLevel level, final String message) {
+        System.out.println(level + " message logged: " + message);
+    }
 }

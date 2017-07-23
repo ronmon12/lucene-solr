@@ -36,4 +36,7 @@ public class SegmentData implements Serializable {
         documents.put(docID, doc);
     }
 
+    public Map<Integer, EDBStoredDocument> getAllDocuments() {
+        return documents;
+    }
 }

@@ -18,13 +18,19 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 
 import java.io.IOException;
-
+import java.util.Map;
+import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.codecs.StoredFieldsWriter;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.MergeState;
+import org.apache.lucene.index.SegmentReader;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
+import org.apache.lucene.util.Bits;
 
 /**
  * Created by rlmathes on 7/15/17.
@@ -59,19 +65,73 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
     @Override
     public void writeField(FieldInfo info, IndexableField field) throws IOException {
 
-        EDBStoredField EDBStoredField = new EDBStoredField();
-        EDBStoredField.name = field.name();
+        EDBStoredField edbStoredField = new EDBStoredField();
+        edbStoredField.name = field.name();
 
-        if(null != field.stringValue()) {
-            EDBStoredField.stringValue = field.stringValue();
-        }
-        else if(null != field.numericValue()) {
-            EDBStoredField.numericValue = field.numericValue();
+        if(null != field.numericValue()) {
+            edbStoredField.numericValue = field.numericValue();
         }
         else if(null != field.binaryValue()) {
-            EDBStoredField.binaryValue = field.binaryValue().bytes;
+            edbStoredField.binaryValue = field.binaryValue().bytes;
+            edbStoredField.offset = field.binaryValue().offset;
+            edbStoredField.length = field.binaryValue().length;
         }
-        currentEDBStoredDocument.addField(EDBStoredField);
+        else if(null != field.stringValue()) {
+            edbStoredField.stringValue = field.stringValue();
+        }
+
+        currentEDBStoredDocument.addField(edbStoredField);
+    }
+
+    @Override
+    public int merge(MergeState mergeState) throws IOException {
+        int docCount = 0;
+        int idx = 0;
+
+        for (AtomicReader reader : mergeState.readers) {
+            final SegmentReader matchingSegmentReader = mergeState.matchingSegmentReaders[idx++];
+            EmbeddedDBStoredFieldsReader matchingFieldsReader = null;
+            if (matchingSegmentReader != null) {
+                final StoredFieldsReader fieldsReader = matchingSegmentReader.getFieldsReader();
+                // we can only bulk-copy if the matching reader is also a CompressingStoredFieldsReader
+                if (fieldsReader != null && fieldsReader instanceof EmbeddedDBStoredFieldsReader) {
+                    matchingFieldsReader = (EmbeddedDBStoredFieldsReader) fieldsReader;
+                }
+            }
+
+            final int maxDoc = reader.maxDoc();
+            final Bits liveDocs = reader.getLiveDocs();
+
+            if(matchingFieldsReader == null) {
+                for (int i = nextLiveDoc(0, liveDocs, maxDoc); i < maxDoc; i = nextLiveDoc(i + 1, liveDocs, maxDoc)) {
+                    Document doc = reader.document(i);
+                    addDocument(doc, mergeState.fieldInfos);
+                    ++docCount;
+                    mergeState.checkAbort.work(300);
+                }
+            }
+            else {
+                Map<Integer, EDBStoredDocument> documentsForMerge = matchingFieldsReader.getDocumentsForMerge();
+                for (int i = nextLiveDoc(0, liveDocs, maxDoc); i < maxDoc; i = nextLiveDoc(i + 1, liveDocs, maxDoc)) {
+                    startDocument();
+                    currentEDBStoredDocument = documentsForMerge.get(i);
+                    finishDocument();
+                    ++docCount;
+                }
+            }
+        }
+
+        return docCount;
+    }
+
+    private static int nextLiveDoc(int doc, Bits liveDocs, int maxDoc) {
+        if (liveDocs == null) {
+            return doc;
+        }
+        while (doc < maxDoc && !liveDocs.get(doc)) {
+            ++doc;
+        }
+        return doc;
     }
 
     @Override
@@ -85,9 +145,7 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
 
-        segmentKey = null;
-        currentEDBStoredDocument = null;
     }
 }

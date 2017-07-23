@@ -17,24 +17,20 @@ package org.apache.lucene;
  * limitations under the License.
  */
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.codecs.embeddeddb.EmbeddedDBCodec;
-import org.apache.lucene.codecs.lucene410.Lucene410Codec;
-import org.apache.lucene.codecs.simpletext.SimpleTextCodec;
+import org.apache.lucene.codecs.embeddeddb.EmbeddedDBStore;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.LongField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PhraseQuery;
@@ -42,12 +38,10 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.SimpleFSDirectory;
-import org.apache.lucene.store.SimpleFSLockFactory;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.Version;
 import org.junit.Assert;
-import org.junit.Before;
+
 
 /**
  *
@@ -57,26 +51,28 @@ import org.junit.Before;
 public class TestCodecOperations extends LuceneTestCase {
 
   private String TEST_WRITES_AND_READS_DIRECTORY = "/Users/rlmathes/_temp/lucene_storage/testWritesAndReads";
-
+  
   public void testWritesAndReads() throws IOException {
 
     List<Document> inputDocuments = new ArrayList<>();
     Document docOne = new Document();
-    docOne.add(newTextField("contents", "car, truck, van", Field.Store.YES));
+    docOne.add(newTextField("vehicles", "car, truck, van", Field.Store.YES));
     Document docTwo = new Document();
-    docTwo.add(newTextField("contents", "car, car, van", Field.Store.YES));
+    docTwo.add(newTextField("vehicles", "car, car, van", Field.Store.YES));
     Document docThree = new Document();
-    docThree.add(newTextField("contents", "car, van, van", Field.Store.YES));
+    docThree.add(newTextField("vehicles", "car, van, van", Field.Store.YES));
+    Field field = new LongField("vehiclesCount", 4L, Field.Store.YES);
+    Document docFour = new Document();
+    docFour.add(field);
+
     inputDocuments.add(docOne);
     inputDocuments.add(docTwo);
     inputDocuments.add(docThree);
-
+    inputDocuments.add(docFour);
+    
     Analyzer analyzer = new MockAnalyzer(random());
-    File file = new File(TEST_WRITES_AND_READS_DIRECTORY);
-    Directory directory = new SimpleFSDirectory(file, new SimpleFSLockFactory());
-
+    Directory directory = newDirectory();
     IndexWriterConfig config = new IndexWriterConfig(Version.LATEST, analyzer);
-    //config.setCodec(new Lucene410Codec());
     config.setCodec(new EmbeddedDBCodec());
     IndexWriter indexWriter = new IndexWriter(directory, config);
     indexWriter.addDocuments(inputDocuments);
@@ -89,25 +85,60 @@ public class TestCodecOperations extends LuceneTestCase {
     }
     indexReader.close();
 
-    Assert.assertTrue(readDocuments.size() == 3);
-    for(int i = 0; i < inputDocuments.size(); i++) {
-      String inputContents = inputDocuments.get(i).getField("contents").stringValue();
-      String readContents = readDocuments.get(i).getField("contents").stringValue();
-      assertEquals(inputContents, readContents);
+    Assert.assertTrue(readDocuments.size() == 4);
+    for(int i = 0; i < 3; i++) {
+      String inputvehicles = inputDocuments.get(i).getField("vehicles").stringValue();
+      String readvehicles = readDocuments.get(i).getField("vehicles").stringValue();
+      assertEquals(inputvehicles, readvehicles);
     }
 
+    Assert.assertEquals(field.numericValue(), readDocuments.get(3).getField("vehiclesCount").numericValue());
     directory.close();
+    EmbeddedDBStore.INSTANCE.close();
   }
 
+  public void testMerge() throws IOException {
+
+    List<Document> inputDocs1 = new ArrayList<>();
+    Document docOne = new Document();
+    docOne.add(newTextField("vehicles", "car, truck, van", Field.Store.YES));
+    Document docTwo = new Document();
+    docTwo.add(newTextField("vehicles", "car, car, van", Field.Store.YES));
+    inputDocs1.add(docOne);
+    inputDocs1.add(docTwo);
+    List<Document> inputDocs2 = new ArrayList<>();
+    Document docThree = new Document();
+    docThree.add(newTextField("vehicles", "truck, truck, van", Field.Store.YES));
+    Document docFour = new Document();
+    docFour.add(newTextField("vehicles", "boat, boat, boat", Field.Store.YES));
+    inputDocs2.add(docThree);
+    inputDocs2.add(docFour);
+
+    Analyzer analyzer = new MockAnalyzer(random());
+    Directory directory = newDirectory();
+    IndexWriterConfig config1 = new IndexWriterConfig(Version.LATEST, analyzer);
+    config1.setCodec(new EmbeddedDBCodec());
+    IndexWriter writer1 = new IndexWriter(directory, config1);
+    writer1.addDocuments(inputDocs1);
+    writer1.close();
+
+    IndexWriterConfig config2 = new IndexWriterConfig(Version.LATEST, analyzer);
+    config2.setCodec(new EmbeddedDBCodec());
+    IndexWriter writer2 = new IndexWriter(directory, config2);
+    writer2.addDocuments(inputDocs2);
+    writer2.forceMerge(1);
+    writer2.close();
+
+    directory.close();
+    EmbeddedDBStore.INSTANCE.close();
+  }
 
 
 
   public void testDemo() throws IOException {
     Analyzer analyzer = new MockAnalyzer(random());
-    File file = new File("/Users/rlmathes/_temp/lucene_storage/testDemo");
-    Directory directory = new SimpleFSDirectory(file, new SimpleFSLockFactory());
+    Directory directory = newDirectory();
     IndexWriterConfig config = new IndexWriterConfig(Version.LATEST, analyzer);
-    //config.setCodec(new SimpleTextCodec());
     config.setCodec(new EmbeddedDBCodec());
 
     //Write the index
@@ -141,5 +172,6 @@ public class TestCodecOperations extends LuceneTestCase {
 
     ireader.close();
     directory.close();
+    EmbeddedDBStore.INSTANCE.close();
   }
 }

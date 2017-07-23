@@ -51,19 +51,19 @@ public enum EmbeddedDBStore {
 
         environmentConfig = new EnvironmentConfig();
         environmentConfig.setAllowCreate(true);
-        File storeFile = new File(PATH_EMBEDDEDDB_STORE);
+        final File storeFile = new File(PATH_EMBEDDEDDB_STORE);
         try {
             storeFile.mkdir();
-            //LOGIT: directory created for the store
+            Logger.LOG(LogLevel.INFO, "Directory created for Lucene embedded database.");
         }
         catch(SecurityException e) {
-            //LOGIT: Security violation while trying to create the directory for embedded database
+            Logger.LOG(LogLevel.ERROR, "Secrity violation occurred while trying to create the embedded database directory.");
         }
 
         try {
             environment = new Environment(storeFile, environmentConfig);
         } catch (DatabaseException e) {
-            //LOGIT: Error occurred creating the embedded database environment
+            Logger.LOG(LogLevel.ERROR, "Error occurred while trying to create the embedded database environment.");
         }
 
         initializeDatabases();
@@ -77,7 +77,7 @@ public enum EmbeddedDBStore {
             segmentStoreDatabase = environment.openDatabase(null, DBNAME_SEGMENT_STORE, databaseConfig);
             storedClassCatalog = new StoredClassCatalog(segmentStoreDatabase);
         } catch (DatabaseException e) {
-            //LOGIT: Failed to access the requested database from the environment
+            Logger.LOG(LogLevel.ERROR, "Failed to access the requested database from the environment.");
         }
 
         segmentKeyBinding = new SerialBinding(storedClassCatalog, SegmentKey.class);
@@ -98,10 +98,8 @@ public enum EmbeddedDBStore {
         try {
             segmentStoreDatabase.put(null, entryKey, entryData);
         } catch (DatabaseException e) {
-            e.printStackTrace();
-            //LOGIT
+            Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the segment store.");
         }
-
     }
 
 
@@ -117,11 +115,14 @@ public enum EmbeddedDBStore {
             segmentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
             data = (SegmentData) segmentDataBinding.entryToObject(entryData);
         } catch (DatabaseException e) {
-            //LOGIT
+            Logger.LOG(LogLevel.ERROR, "Failed to retrieve requested segment from segment store.");
         }
-
         return data;
     }
 
+    public void close() {
+        Logger.LOG(LogLevel.INFO, "Releasing storage for embedded database environment.");
+        environment = null;
+    }
 
 }
