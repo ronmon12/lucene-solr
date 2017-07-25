@@ -15,6 +15,7 @@
 
 org.apache.lucene.codecs.lucene3x.PreFlexRWCodec
 org.apache.lucene.codecs.asserting.AssertingCodec
+org.apache.lucene.codecs.embeddeddb.EmbeddedDBCodec
 org.apache.lucene.codecs.cheapbastard.CheapBastardCodec
 org.apache.lucene.codecs.compressing.FastCompressingCodec
 org.apache.lucene.codecs.compressing.FastDecompressionCompressingCodec
