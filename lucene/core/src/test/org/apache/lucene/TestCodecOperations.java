@@ -31,6 +31,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.SegmentReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PhraseQuery;
@@ -41,6 +42,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.Version;
 import org.junit.Assert;
+import org.junit.Test;
 
 
 /**
@@ -50,9 +52,10 @@ import org.junit.Assert;
  */
 public class TestCodecOperations extends LuceneTestCase {
 
-  private String TEST_WRITES_AND_READS_DIRECTORY = "/Users/rlmathes/_temp/lucene_storage/testWritesAndReads";
-  
+  @Test
   public void testWritesAndReads() throws IOException {
+
+    EmbeddedDBStore.INSTANCE.reinitialize();
 
     List<Document> inputDocuments = new ArrayList<>();
     Document docOne = new Document();
@@ -94,10 +97,14 @@ public class TestCodecOperations extends LuceneTestCase {
 
     Assert.assertEquals(field.numericValue(), readDocuments.get(3).getField("vehiclesCount").numericValue());
     directory.close();
+    EmbeddedDBStore.INSTANCE.purge();
     EmbeddedDBStore.INSTANCE.close();
   }
 
+  @Test
   public void testMerge() throws IOException {
+
+    EmbeddedDBStore.INSTANCE.reinitialize();
 
     List<Document> inputDocs1 = new ArrayList<>();
     Document docOne = new Document();
@@ -116,26 +123,39 @@ public class TestCodecOperations extends LuceneTestCase {
 
     Analyzer analyzer = new MockAnalyzer(random());
     Directory directory = newDirectory();
+
     IndexWriterConfig config1 = new IndexWriterConfig(Version.LATEST, analyzer);
     config1.setCodec(new EmbeddedDBCodec());
     IndexWriter writer1 = new IndexWriter(directory, config1);
     writer1.addDocuments(inputDocs1);
     writer1.close();
+    DirectoryReader reader = DirectoryReader.open(directory);
+    SegmentReader segmentReader1 = getOnlySegmentReader(reader);
+    assertEquals("_0", segmentReader1.getSegmentName());
+    segmentReader1.close();
 
     IndexWriterConfig config2 = new IndexWriterConfig(Version.LATEST, analyzer);
     config2.setCodec(new EmbeddedDBCodec());
     IndexWriter writer2 = new IndexWriter(directory, config2);
     writer2.addDocuments(inputDocs2);
+
     writer2.forceMerge(1);
     writer2.close();
+    reader = DirectoryReader.open(directory);
+    SegmentReader segmentReader2 = getOnlySegmentReader(reader);
+    assertEquals("_2", segmentReader2.getSegmentName());
+    segmentReader2.close();
 
     directory.close();
+    EmbeddedDBStore.INSTANCE.purge();
     EmbeddedDBStore.INSTANCE.close();
   }
 
-
-
+  @Test
   public void testDemo() throws IOException {
+
+    EmbeddedDBStore.INSTANCE.reinitialize();
+
     Analyzer analyzer = new MockAnalyzer(random());
     Directory directory = newDirectory();
     IndexWriterConfig config = new IndexWriterConfig(Version.LATEST, analyzer);
@@ -172,6 +192,7 @@ public class TestCodecOperations extends LuceneTestCase {
 
     ireader.close();
     directory.close();
+    EmbeddedDBStore.INSTANCE.purge();
     EmbeddedDBStore.INSTANCE.close();
   }
 }

@@ -66,18 +66,18 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
     public void writeField(FieldInfo info, IndexableField field) throws IOException {
 
         EDBStoredField edbStoredField = new EDBStoredField();
-        edbStoredField.name = field.name();
+        edbStoredField.setName(field.name());
 
         if(null != field.numericValue()) {
-            edbStoredField.numericValue = field.numericValue();
+            edbStoredField.setNumericValue(field.numericValue());
         }
         else if(null != field.binaryValue()) {
-            edbStoredField.binaryValue = field.binaryValue().bytes;
-            edbStoredField.offset = field.binaryValue().offset;
-            edbStoredField.length = field.binaryValue().length;
+            edbStoredField.setBinaryValue(field.binaryValue().bytes);
+            edbStoredField.setOffset(field.binaryValue().offset);
+            edbStoredField.setLength(field.binaryValue().length);
         }
         else if(null != field.stringValue()) {
-            edbStoredField.stringValue = field.stringValue();
+            edbStoredField.setStringValue(field.stringValue());
         }
 
         currentEDBStoredDocument.addField(edbStoredField);

@@ -42,13 +42,13 @@ public class TestEmbeddedDBStore {
         SegmentData data = new SegmentData();
         EDBStoredDocument doc = new EDBStoredDocument();
         EDBStoredField field = new EDBStoredField();
-        field.stringValue = "test_value";
+        field.setStringValue("test_value");
         doc.addField(field);
         data.putDocument(0, doc);
         EmbeddedDBStore.INSTANCE.put(key, data);
 
         List<EDBStoredField> fields = EmbeddedDBStore.INSTANCE.get(key).getDocument(0).getFields();
-        Assert.assertEquals("test_value", fields.get(0).stringValue);
+        Assert.assertEquals("test_value", fields.get(0).getStringValue());
     }
 
 }

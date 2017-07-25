@@ -25,15 +25,63 @@ import java.io.Serializable;
  */
 public class EDBStoredField implements Serializable {
 
-    public String name;
+    private String name;
 
-    public byte[] binaryValue;
+    private byte[] binaryValue;
 
-    public int offset;
+    private int offset;
 
-    public int length;
+    private int length;
 
-    public String stringValue;
+    private String stringValue;
 
-    public Number numericValue;
+    private Number numericValue;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public byte[] getBinaryValue() {
+        return binaryValue;
+    }
+
+    public void setBinaryValue(byte[] binaryValue) {
+        this.binaryValue = binaryValue;
+    }
+
+    public int getOffset() {
+        return offset;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    public int getLength() {
+        return length;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
+    }
+
+    public String getStringValue() {
+        return stringValue;
+    }
+
+    public void setStringValue(String stringValue) {
+        this.stringValue = stringValue;
+    }
+
+    public Number getNumericValue() {
+        return numericValue;
+    }
+
+    public void setNumericValue(Number numericValue) {
+        this.numericValue = numericValue;
+    }
 }

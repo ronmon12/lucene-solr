@@ -63,28 +63,29 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
         for(EDBStoredField field : document.getFields()) {
 
-            FieldInfo info = this.fn.fieldInfo(field.name);
+            FieldInfo info = this.fn.fieldInfo(field.getName());
 
             if(visitor.needsField(info) == StoredFieldVisitor.Status.YES) {
-                if(null != field.stringValue) {
-                    visitor.stringField(info, field.stringValue);
+                if(null != field.getStringValue()) {
+                    visitor.stringField(info, field.getStringValue());
                 }
-                else if(null != field.numericValue) {
-                    Number number = field.numericValue;
+                else if(null != field.getNumericValue()) {
+                    Number number = field.getNumericValue();
                     if (number instanceof Integer) {
-                        visitor.intField(info, (Integer) field.numericValue);
+                        visitor.intField(info, (Integer) field.getNumericValue());
                     } else if (number instanceof Long) {
-                        visitor.longField(info, (Long) field.numericValue);
+                        visitor.longField(info, (Long) field.getNumericValue());
                     } else if (number instanceof Float) {
-                        visitor.floatField(info, (Float) field.numericValue);
+                        visitor.floatField(info, (Float) field.getNumericValue());
                     } else if (number instanceof Double) {
-                        visitor.doubleField(info, (Double) field.numericValue);
+                        visitor.doubleField(info, (Double) field.getNumericValue());
                     } else {
                         throw new IllegalArgumentException("cannot store numeric type " + number.getClass());
                     }
                 }
-                else if(null != field.binaryValue) {
-                    visitor.binaryField(info, Arrays.copyOfRange(field.binaryValue, field.offset, field.offset+=field.length));
+                else if(null != field.getBinaryValue()) {
+                    int endOffset = field.getOffset() + field.getLength();
+                    visitor.binaryField(info, Arrays.copyOfRange(field.getBinaryValue(), field.getOffset(), endOffset));
                 }
             }
             else if(visitor.needsField(info) == STOP) {
@@ -122,9 +123,9 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     }
 
     public Map<Integer, EDBStoredDocument> getDocumentsForMerge() {
-        Map<Integer, EDBStoredDocument> documentsForMerge = new HashMap<>();
+        final Map<Integer, EDBStoredDocument> documentsForMerge = new HashMap<>();
         documentsForMerge.putAll(segmentData.getAllDocuments());
-        if(documentsForMerge.size() > 1) {
+        if(documentsForMerge.size() < 1) {
             Logger.LOG(LogLevel.INFO, "Segment " + si.name + " is returning no documents for merge");
         }
         return segmentData.getAllDocuments();

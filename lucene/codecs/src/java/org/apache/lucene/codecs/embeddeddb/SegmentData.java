@@ -23,10 +23,13 @@ import java.util.Map;
 
 /**
  * Created by rlmathes on 7/16/17.
+ *
+ * Data transfer object for storing index segments in the embedded database
+ *
  */
 public class SegmentData implements Serializable {
 
-    private Map<Integer, EDBStoredDocument> documents = new HashMap<>();
+    final private Map<Integer, EDBStoredDocument> documents = new HashMap<>();
 
     public EDBStoredDocument getDocument(int docID) {
         return documents.get(docID);

@@ -27,7 +27,7 @@ import java.util.List;
  */
 public class EDBStoredDocument implements Serializable{
 
-    private List<EDBStoredField> fields = new ArrayList<>();
+    private final List<EDBStoredField> fields = new ArrayList<>();
 
     public void addField(final EDBStoredField field) {
         fields.add(field);
@@ -36,6 +36,5 @@ public class EDBStoredDocument implements Serializable{
     public List<EDBStoredField> getFields() {
         return fields;
     }
-
 
 }

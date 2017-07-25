@@ -1,6 +1,7 @@
 package org.apache.lucene.codecs.embeddeddb;
 
 import java.io.File;
+import java.util.Properties;
 
 import com.sleepycat.bind.EntryBinding;
 import com.sleepycat.bind.serial.SerialBinding;
@@ -32,6 +33,9 @@ import com.sleepycat.je.LockMode;
 
 /**
  * Created by rlmathes on 7/15/17.
+ *
+ * Singleton class responsible for granting access to an embedded key/value database
+ *
  */
 public enum EmbeddedDBStore {
 
@@ -44,20 +48,36 @@ public enum EmbeddedDBStore {
     private StoredClassCatalog storedClassCatalog;
     private EntryBinding segmentDataBinding;
     private EntryBinding segmentKeyBinding;
-    private final String PATH_EMBEDDEDDB_STORE = "/Users/rlmathes/_temp/luceneStore"; //TODO: Integrate w/ config
+    private final Properties properties = new Properties();
+    private final String PATH_EMBEDDEDDB_STORE = "tmp_lucene_embedded_store_directory";
     private final String DBNAME_SEGMENT_STORE = "segment_store";
+    private final String LOG_MEM_ONLY = "je.log.memOnly";
 
     EmbeddedDBStore() {
+        initializeEnvironment();
+        initializeDatabases();
+    }
 
-        environmentConfig = new EnvironmentConfig();
+    private void initializeEnvironment() {
+        String luceneEmbeddedDBMemOnly = System.getProperty("luceneEmbeddedDBMemOnly");
+        if(luceneEmbeddedDBMemOnly != null && luceneEmbeddedDBMemOnly.equals("true")) {
+            properties.put(LOG_MEM_ONLY, "true");
+            Logger.LOG(LogLevel.INFO, "Starting Lucene embedded database in memory-only mode.");
+        }
+        environmentConfig = new EnvironmentConfig(properties);
         environmentConfig.setAllowCreate(true);
-        final File storeFile = new File(PATH_EMBEDDEDDB_STORE);
+
+        String luceneEmbeddedDBStoreDirectory = System.getProperty("luceneEmbeddedDBStoreDirectory");
+        if(null == luceneEmbeddedDBStoreDirectory) {
+            luceneEmbeddedDBStoreDirectory = PATH_EMBEDDEDDB_STORE;
+        }
+        final File storeFile = new File(luceneEmbeddedDBStoreDirectory);
         try {
             storeFile.mkdir();
             Logger.LOG(LogLevel.INFO, "Directory created for Lucene embedded database.");
         }
         catch(SecurityException e) {
-            Logger.LOG(LogLevel.ERROR, "Secrity violation occurred while trying to create the embedded database directory.");
+            Logger.LOG(LogLevel.ERROR, "Security violation occurred while trying to create the embedded database directory.");
         }
 
         try {
@@ -66,11 +86,10 @@ public enum EmbeddedDBStore {
             Logger.LOG(LogLevel.ERROR, "Error occurred while trying to create the embedded database environment.");
         }
 
-        initializeDatabases();
     }
 
-
     private void initializeDatabases() {
+
         databaseConfig = new DatabaseConfig();
         databaseConfig.setAllowCreate(true);
         try {
@@ -84,15 +103,13 @@ public enum EmbeddedDBStore {
         segmentDataBinding = new SerialBinding(storedClassCatalog, SegmentData.class);
     }
 
-
     Database getStore() {
         return segmentStoreDatabase;
     }
 
-
     public void put(final SegmentKey key, final SegmentData data) {
-        DatabaseEntry entryKey = new DatabaseEntry();
-        DatabaseEntry entryData = new DatabaseEntry();
+        final DatabaseEntry entryKey = new DatabaseEntry();
+        final DatabaseEntry entryData = new DatabaseEntry();
         segmentKeyBinding.objectToEntry(key, entryKey);
         segmentDataBinding.objectToEntry(data, entryData);
         try {
@@ -105,8 +122,8 @@ public enum EmbeddedDBStore {
 
     public SegmentData get(final SegmentKey key) {
 
-        DatabaseEntry entryKey = new DatabaseEntry();
-        DatabaseEntry entryData = new DatabaseEntry();
+        final DatabaseEntry entryKey = new DatabaseEntry();
+        final DatabaseEntry entryData = new DatabaseEntry();
         SegmentData data = new SegmentData();
         segmentKeyBinding.objectToEntry(key, entryKey);
         segmentDataBinding.objectToEntry(data, entryData);
@@ -121,8 +138,27 @@ public enum EmbeddedDBStore {
     }
 
     public void close() {
-        Logger.LOG(LogLevel.INFO, "Releasing storage for embedded database environment.");
-        environment = null;
+
+        try {
+            environment.close();
+            Logger.LOG(LogLevel.INFO, "Releasing resources for embedded database environment.");
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Failed to release resources for embedded database environment.");
+        }
+    }
+
+    public void purge() {
+        try {
+            environment.truncateDatabase(null, DBNAME_SEGMENT_STORE, false);
+            Logger.LOG(LogLevel.INFO, "Truncating the segment store.");
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Failed to truncate the segment store");
+        }
+    }
+
+    public void reinitialize() {
+        initializeEnvironment();
+        initializeDatabases();
     }
 
 }
