@@ -38,7 +38,7 @@ public class TestEmbeddedDBStore {
     @Test
     public void put() {
 
-        SegmentKey key = new SegmentKey("seg_1");
+        String key = "seg_1";
         SegmentData data = new SegmentData();
         EDBStoredDocument doc = new EDBStoredDocument();
         EDBStoredField field = new EDBStoredField();
@@ -51,4 +51,9 @@ public class TestEmbeddedDBStore {
         Assert.assertEquals("test_value", fields.get(0).getStringValue());
     }
 
+    @Test
+    public void getRAMUsed() {
+        long ram = EmbeddedDBStore.INSTANCE.getRAMUsed();
+        System.out.println(ram);
+    }
 }

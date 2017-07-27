@@ -48,7 +48,7 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
         this.fn = fn;
         this.ioContext = context;
 
-        SegmentKey segmentKey = new SegmentKey(si.name);
+        String segmentKey = si.name;
         segmentData = EmbeddedDBStore.INSTANCE.get(segmentKey);
     }
 

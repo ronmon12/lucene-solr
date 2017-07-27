@@ -37,14 +37,14 @@ import org.apache.lucene.util.Bits;
  */
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
-    private SegmentKey segmentKey;
+    private String segmentKey;
     private SegmentData segmentData;
     private EDBStoredDocument currentEDBStoredDocument;
     private int currentDocumentKey = 0;
 
     public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
 
-        segmentKey = new SegmentKey(segment);
+        segmentKey = segment;
         segmentData = new SegmentData();
         EmbeddedDBStore.INSTANCE.put(segmentKey, segmentData);
     }

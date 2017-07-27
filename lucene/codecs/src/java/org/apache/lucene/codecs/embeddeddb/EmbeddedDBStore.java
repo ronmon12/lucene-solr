@@ -99,7 +99,7 @@ public enum EmbeddedDBStore {
             Logger.LOG(LogLevel.ERROR, "Failed to access the requested database from the environment.");
         }
 
-        segmentKeyBinding = new SerialBinding(storedClassCatalog, SegmentKey.class);
+        segmentKeyBinding = new SerialBinding(storedClassCatalog, String.class);
         segmentDataBinding = new SerialBinding(storedClassCatalog, SegmentData.class);
     }
 
@@ -107,7 +107,7 @@ public enum EmbeddedDBStore {
         return segmentStoreDatabase;
     }
 
-    public void put(final SegmentKey key, final SegmentData data) {
+    public void put(final String key, final SegmentData data) {
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
         segmentKeyBinding.objectToEntry(key, entryKey);
@@ -120,7 +120,7 @@ public enum EmbeddedDBStore {
     }
 
 
-    public SegmentData get(final SegmentKey key) {
+    public SegmentData get(final String key) {
 
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
@@ -160,5 +160,6 @@ public enum EmbeddedDBStore {
         initializeEnvironment();
         initializeDatabases();
     }
+
 
 }
