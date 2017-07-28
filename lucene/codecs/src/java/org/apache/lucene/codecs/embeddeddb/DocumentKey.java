@@ -18,28 +18,25 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
- * Created by rlmathes on 7/16/17.
- *
- * Data transfer object for storing index segments in the embedded database
- *
+ * Created by rlmathes on 7/27/17.
  */
-public class SegmentData implements Serializable {
+public class DocumentKey implements Serializable {
 
-    final private Map<Integer, EDBStoredDocument> documents = new HashMap<>();
+    private String segmentName;
+    private int documentID;
 
-    public EDBStoredDocument getDocument(int docID) {
-        return documents.get(docID);
+    public DocumentKey(final String segmentName, final int documentID) {
+        this.segmentName = segmentName;
+        this.documentID = documentID;
     }
 
-    public void putDocument(int docID, EDBStoredDocument doc) {
-        documents.put(docID, doc);
+    public String getSegmentName() {
+        return segmentName;
     }
 
-    public Map<Integer, EDBStoredDocument> getAllDocuments() {
-        return documents;
+    public int getDocumentID() {
+        return documentID;
     }
 }

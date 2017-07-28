@@ -37,28 +37,24 @@ import org.apache.lucene.util.Bits;
  */
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
-    private String segmentKey;
-    private SegmentData segmentData;
-    private EDBStoredDocument currentEDBStoredDocument;
+    private String segmentName;
+    private DocumentData currentDocument;
     private int currentDocumentKey = 0;
 
     public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
 
-        segmentKey = segment;
-        segmentData = new SegmentData();
-        EmbeddedDBStore.INSTANCE.put(segmentKey, segmentData);
+        segmentName = segment;
     }
 
     @Override
     public void startDocument() throws IOException {
-        currentEDBStoredDocument = new EDBStoredDocument();
+        currentDocument = new DocumentData();
     }
 
     @Override
     public void finishDocument() throws IOException {
 
-        segmentData.putDocument(currentDocumentKey, currentEDBStoredDocument);
-        EmbeddedDBStore.INSTANCE.put(segmentKey, segmentData);
+        EmbeddedDBStore.INSTANCE.put(segmentName, currentDocumentKey, currentDocument);
         currentDocumentKey++;
     }
 
@@ -80,7 +76,7 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
             edbStoredField.setStringValue(field.stringValue());
         }
 
-        currentEDBStoredDocument.addField(edbStoredField);
+        currentDocument.addField(edbStoredField);
     }
 
     @Override
@@ -111,10 +107,10 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
                 }
             }
             else {
-                Map<Integer, EDBStoredDocument> documentsForMerge = matchingFieldsReader.getDocumentsForMerge();
+                Map<Integer, DocumentData> documentsForMerge = matchingFieldsReader.getDocumentsForMerge();
                 for (int i = nextLiveDoc(0, liveDocs, maxDoc); i < maxDoc; i = nextLiveDoc(i + 1, liveDocs, maxDoc)) {
                     startDocument();
-                    currentEDBStoredDocument = documentsForMerge.get(i);
+                    currentDocument = documentsForMerge.get(i);
                     finishDocument();
                     ++docCount;
                 }

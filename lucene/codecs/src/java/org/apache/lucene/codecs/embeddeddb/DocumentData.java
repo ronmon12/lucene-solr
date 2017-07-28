@@ -17,37 +17,22 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
-import com.sleepycat.je.Database;
-import org.junit.Assert;
-import org.junit.Test;
-
 /**
- * Created by rlmathes on 7/16/17.
+ * Created by rlmathes on 7/27/17.
  */
-public class TestEmbeddedDBStore {
+public class DocumentData implements Serializable {
 
-    @Test
-    public void getStore() throws Exception {
+    private final List<EDBStoredField> fields = new ArrayList<>();
 
-        Database store = EmbeddedDBStore.INSTANCE.getStore();
-        Assert.assertEquals("document_store", store.getDatabaseName());
+    public void addField(final EDBStoredField field) {
+        fields.add(field);
     }
 
-    @Test
-    public void putAndGet() {
-
-        String segmentName = "seg_1";
-        DocumentData document = new DocumentData();
-        int docID = 0;
-        EDBStoredField field = new EDBStoredField();
-        field.setStringValue("test_value");
-        document.addField(field);
-        EmbeddedDBStore.INSTANCE.put(segmentName, docID, document);
-
-        List<EDBStoredField> fields = EmbeddedDBStore.INSTANCE.get(segmentName, docID).getFields();
-        Assert.assertEquals("test_value", fields.get(0).getStringValue());
+    public List<EDBStoredField> getFields() {
+        return fields;
     }
-
 }

@@ -1,6 +1,10 @@
 package org.apache.lucene.codecs.embeddeddb;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import com.sleepycat.bind.EntryBinding;
@@ -44,14 +48,18 @@ public enum EmbeddedDBStore {
     private EnvironmentConfig environmentConfig;
     private Environment environment;
     private DatabaseConfig databaseConfig;
-    private Database segmentStoreDatabase;
     private StoredClassCatalog storedClassCatalog;
-    private EntryBinding segmentDataBinding;
-    private EntryBinding segmentKeyBinding;
     private final Properties properties = new Properties();
     private final String PATH_EMBEDDEDDB_STORE = "tmp_lucene_embedded_store_directory";
-    private final String DBNAME_SEGMENT_STORE = "segment_store";
     private final String LOG_MEM_ONLY = "je.log.memOnly";
+    private Map<String, List<DocumentKey>> keyStore = new HashMap<>();
+
+    private Database documentStoreDatabase;
+    private EntryBinding documentKeyBinding;
+    private EntryBinding documentDataBinding;
+    private EntryBinding keyStoreBinding;
+    private EntryBinding keyStoreKeyBinding;
+    private final String DBNAME_DOCUMENT_STORE = "document_store";
 
     EmbeddedDBStore() {
         initializeEnvironment();
@@ -93,48 +101,76 @@ public enum EmbeddedDBStore {
         databaseConfig = new DatabaseConfig();
         databaseConfig.setAllowCreate(true);
         try {
-            segmentStoreDatabase = environment.openDatabase(null, DBNAME_SEGMENT_STORE, databaseConfig);
-            storedClassCatalog = new StoredClassCatalog(segmentStoreDatabase);
+            documentStoreDatabase = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
+            storedClassCatalog = new StoredClassCatalog(documentStoreDatabase);
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to access the requested database from the environment.");
         }
 
-        segmentKeyBinding = new SerialBinding(storedClassCatalog, String.class);
-        segmentDataBinding = new SerialBinding(storedClassCatalog, SegmentData.class);
+        documentKeyBinding = new SerialBinding(storedClassCatalog, DocumentKey.class);
+        documentDataBinding = new SerialBinding(storedClassCatalog, DocumentData.class);
+        keyStoreBinding = new SerialBinding(storedClassCatalog, Map.class);
+        keyStoreKeyBinding = new SerialBinding(storedClassCatalog, String.class);
     }
 
     Database getStore() {
-        return segmentStoreDatabase;
-    }
-
-    public void put(final String key, final SegmentData data) {
-        final DatabaseEntry entryKey = new DatabaseEntry();
-        final DatabaseEntry entryData = new DatabaseEntry();
-        segmentKeyBinding.objectToEntry(key, entryKey);
-        segmentDataBinding.objectToEntry(data, entryData);
-        try {
-            segmentStoreDatabase.put(null, entryKey, entryData);
-        } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the segment store.");
-        }
+        return documentStoreDatabase;
     }
 
 
-    public SegmentData get(final String key) {
+
+    public void put(final String segmentName, final int docID, final DocumentData document) {
+
+        final DocumentKey documentKey = new DocumentKey(segmentName, docID);
 
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
-        SegmentData data = new SegmentData();
-        segmentKeyBinding.objectToEntry(key, entryKey);
-        segmentDataBinding.objectToEntry(data, entryData);
+        documentKeyBinding.objectToEntry(documentKey, entryKey);
+        documentDataBinding.objectToEntry(document, entryData);
+        try {
+            documentStoreDatabase.put(null, entryKey, entryData);
+            if(keyStore.containsKey(segmentName)) {
+                keyStore.get(segmentName).add(documentKey);
+            }
+            else {
+                List<DocumentKey> keys = new ArrayList<>();
+                keys.add(documentKey);
+                keyStore.put(segmentName, keys);
+            }
+
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the document store.");
+        }
+    }
+
+    public DocumentData get(final String segmentName, final int docID) {
+
+        final DocumentKey documentKey = new DocumentKey(segmentName, docID);
+        DocumentData document = new DocumentData();
+
+        final DatabaseEntry entryKey = new DatabaseEntry();
+        final DatabaseEntry entryData = new DatabaseEntry();
+        documentKeyBinding.objectToEntry(documentKey, entryKey);
+        documentDataBinding.objectToEntry(document, entryData);
 
         try {
-            segmentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
-            data = (SegmentData) segmentDataBinding.entryToObject(entryData);
+            documentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
+            document = (DocumentData) documentDataBinding.entryToObject(entryData);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to retrieve requested segment from segment store.");
+            Logger.LOG(LogLevel.ERROR, "Failed to retrieve requested document from document store.");
         }
-        return data;
+        return document;
+    }
+
+    public Map<Integer, DocumentData> getDocumentsForSegment(final String segmentName) {
+
+        Map<Integer, DocumentData> documentSet = new HashMap<>();
+
+        for(DocumentKey key : keyStore.get(segmentName)) {
+            documentSet.put(key.getDocumentID(), get(key.getSegmentName(), key.getDocumentID()));
+        }
+
+        return documentSet;
     }
 
     public void close() {
@@ -149,10 +185,10 @@ public enum EmbeddedDBStore {
 
     public void purge() {
         try {
-            environment.truncateDatabase(null, DBNAME_SEGMENT_STORE, false);
-            Logger.LOG(LogLevel.INFO, "Truncating the segment store.");
+            environment.truncateDatabase(null, DBNAME_DOCUMENT_STORE, false);
+            Logger.LOG(LogLevel.INFO, "Truncating the document store.");
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to truncate the segment store");
+            Logger.LOG(LogLevel.ERROR, "Failed to truncate the document store");
         }
     }
 
@@ -160,6 +196,5 @@ public enum EmbeddedDBStore {
         initializeEnvironment();
         initializeDatabases();
     }
-
 
 }

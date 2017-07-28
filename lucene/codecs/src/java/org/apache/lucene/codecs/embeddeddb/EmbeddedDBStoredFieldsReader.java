@@ -39,7 +39,7 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     private SegmentInfo si;
     private FieldInfos fn;
     private IOContext ioContext;
-    private SegmentData segmentData;
+    private String segmentName;
 
     public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) {
 
@@ -48,14 +48,13 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
         this.fn = fn;
         this.ioContext = context;
 
-        String segmentKey = si.name;
-        segmentData = EmbeddedDBStore.INSTANCE.get(segmentKey);
+        segmentName = si.name;
     }
 
     @Override
     public void visitDocument(int n, StoredFieldVisitor visitor) throws IOException {
 
-        EDBStoredDocument document = segmentData.getDocument(n);
+        DocumentData document = EmbeddedDBStore.INSTANCE.get(segmentName, n);
         if(null == document) {
             Logger.LOG(LogLevel.WARN, "No document stored for ID = " + n);
             return;
@@ -99,7 +98,6 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     @Override
     public StoredFieldsReader clone() {
         EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.fn, this.ioContext);
-        reader.setSegmentData(this.segmentData);
         return reader;
     }
 
@@ -118,17 +116,13 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
         return 0;
     }
 
-    public void setSegmentData(SegmentData segmentData) {
-        this.segmentData = segmentData;
-    }
-
-    public Map<Integer, EDBStoredDocument> getDocumentsForMerge() {
-        final Map<Integer, EDBStoredDocument> documentsForMerge = new HashMap<>();
-        documentsForMerge.putAll(segmentData.getAllDocuments());
+    public Map<Integer, DocumentData> getDocumentsForMerge() {
+        final Map<Integer, DocumentData> documentsForMerge = new HashMap<>();
+        documentsForMerge.putAll(EmbeddedDBStore.INSTANCE.getDocumentsForSegment(segmentName));
         if(documentsForMerge.size() < 1) {
             Logger.LOG(LogLevel.INFO, "Segment " + si.name + " is returning no documents for merge");
         }
-        return segmentData.getAllDocuments();
+        return documentsForMerge;
     }
 
 }
