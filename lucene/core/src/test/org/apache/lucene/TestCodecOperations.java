@@ -23,7 +23,7 @@ import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.codecs.embeddeddb.EmbeddedDBCodec;
-import org.apache.lucene.codecs.embeddeddb.EmbeddedDBStore;
+import org.apache.lucene.codecs.embeddeddb.BerkeleyDBStore;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.LongField;
@@ -54,8 +54,6 @@ public class TestCodecOperations extends LuceneTestCase {
 
   @Test
   public void testWritesAndReads() throws IOException {
-
-    EmbeddedDBStore.INSTANCE.reinitialize();
 
     List<Document> inputDocuments = new ArrayList<>();
     Document docOne = new Document();
@@ -97,14 +95,11 @@ public class TestCodecOperations extends LuceneTestCase {
 
     Assert.assertEquals(field.numericValue(), readDocuments.get(3).getField("vehiclesCount").numericValue());
     directory.close();
-    EmbeddedDBStore.INSTANCE.purge();
-    EmbeddedDBStore.INSTANCE.close();
+    BerkeleyDBStore.INSTANCE.purge();
   }
 
   @Test
   public void testMerge() throws IOException {
-
-    EmbeddedDBStore.INSTANCE.reinitialize();
 
     List<Document> inputDocs1 = new ArrayList<>();
     Document docOne = new Document();
@@ -147,14 +142,11 @@ public class TestCodecOperations extends LuceneTestCase {
     segmentReader2.close();
 
     directory.close();
-    EmbeddedDBStore.INSTANCE.purge();
-    EmbeddedDBStore.INSTANCE.close();
+    BerkeleyDBStore.INSTANCE.purge();
   }
 
   @Test
   public void testDemo() throws IOException {
-
-    EmbeddedDBStore.INSTANCE.reinitialize();
 
     Analyzer analyzer = new MockAnalyzer(random());
     Directory directory = newDirectory();
@@ -192,7 +184,6 @@ public class TestCodecOperations extends LuceneTestCase {
 
     ireader.close();
     directory.close();
-    EmbeddedDBStore.INSTANCE.purge();
-    EmbeddedDBStore.INSTANCE.close();
+    BerkeleyDBStore.INSTANCE.purge();
   }
 }

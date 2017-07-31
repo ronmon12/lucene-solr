@@ -17,26 +17,14 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
-import java.io.Serializable;
-
 /**
- * Created by rlmathes on 7/27/17.
+ * Created by rlmathes on 7/29/17.
  */
-public class DocumentKey implements Serializable {
+public class BerkeleyDBCoreConstants {
 
-    private String segmentName;
-    private int documentID;
-
-    public DocumentKey(final String segmentName, final int documentID) {
-        this.segmentName = segmentName;
-        this.documentID = documentID;
-    }
-
-    public String getSegmentName() {
-        return segmentName;
-    }
-
-    public int getDocumentID() {
-        return documentID;
-    }
+    static final String ENV_RUN_IN_COMPRESSOR = "je.env.runINCompressor";
+    static final String ENV_RUN_CHECKPOINTER = "je.env.runCheckpointer";
+    static final String ENV_RUN_CLEANER = "je.env.runCleaner";
+    static final String ENV_RUN_EVICTOR = "je.env.runEvictor";
+    static final String LOG_MEM_ONLY = "je.log.memOnly";
 }

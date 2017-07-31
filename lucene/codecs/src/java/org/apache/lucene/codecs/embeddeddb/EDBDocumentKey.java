@@ -18,23 +18,37 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
 
 /**
- * Created by rlmathes on 7/16/17.
+ * Created by rlmathes on 7/27/17.
  */
-public class EDBStoredDocument implements Serializable{
+public class EDBDocumentKey implements Serializable {
 
-    private final List<EDBStoredField> fields = new ArrayList<>();
+    private String segmentName;
+    private int documentID;
 
-    public void addField(final EDBStoredField field) {
-        fields.add(field);
+    public EDBDocumentKey(final String segmentName, final int documentID) {
+        this.segmentName = segmentName;
+        this.documentID = documentID;
     }
 
-    public List<EDBStoredField> getFields() {
-        return fields;
+    public String getSegmentName() {
+        return segmentName;
+    }
+
+    public int getDocumentID() {
+        return documentID;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if(o instanceof EDBDocumentKey) {
+            final EDBDocumentKey compareKey = (EDBDocumentKey) o;
+            if(this.segmentName.equals(compareKey.getSegmentName()) && this.documentID == compareKey.getDocumentID()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

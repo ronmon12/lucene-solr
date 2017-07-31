@@ -18,16 +18,10 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 
 import java.io.IOException;
-import java.util.Map;
-import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.codecs.StoredFieldsWriter;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.index.MergeState;
-import org.apache.lucene.index.SegmentReader;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.util.Bits;
@@ -38,24 +32,20 @@ import org.apache.lucene.util.Bits;
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
     private String segmentName;
-    private DocumentData currentDocument;
-    private int currentDocumentKey = 0;
+    private EDBDocument currentDocument;
 
     public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
-
         segmentName = segment;
     }
 
     @Override
     public void startDocument() throws IOException {
-        currentDocument = new DocumentData();
+        currentDocument = new EDBDocument();
     }
 
     @Override
     public void finishDocument() throws IOException {
-
-        EmbeddedDBStore.INSTANCE.put(segmentName, currentDocumentKey, currentDocument);
-        currentDocumentKey++;
+        BerkeleyDBStore.INSTANCE.put(segmentName, currentDocument);
     }
 
     @Override
@@ -79,47 +69,6 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
         currentDocument.addField(edbStoredField);
     }
 
-    @Override
-    public int merge(MergeState mergeState) throws IOException {
-        int docCount = 0;
-        int idx = 0;
-
-        for (AtomicReader reader : mergeState.readers) {
-            final SegmentReader matchingSegmentReader = mergeState.matchingSegmentReaders[idx++];
-            EmbeddedDBStoredFieldsReader matchingFieldsReader = null;
-            if (matchingSegmentReader != null) {
-                final StoredFieldsReader fieldsReader = matchingSegmentReader.getFieldsReader();
-                // we can only bulk-copy if the matching reader is also a CompressingStoredFieldsReader
-                if (fieldsReader != null && fieldsReader instanceof EmbeddedDBStoredFieldsReader) {
-                    matchingFieldsReader = (EmbeddedDBStoredFieldsReader) fieldsReader;
-                }
-            }
-
-            final int maxDoc = reader.maxDoc();
-            final Bits liveDocs = reader.getLiveDocs();
-
-            if(matchingFieldsReader == null) {
-                for (int i = nextLiveDoc(0, liveDocs, maxDoc); i < maxDoc; i = nextLiveDoc(i + 1, liveDocs, maxDoc)) {
-                    Document doc = reader.document(i);
-                    addDocument(doc, mergeState.fieldInfos);
-                    ++docCount;
-                    mergeState.checkAbort.work(300);
-                }
-            }
-            else {
-                Map<Integer, DocumentData> documentsForMerge = matchingFieldsReader.getDocumentsForMerge();
-                for (int i = nextLiveDoc(0, liveDocs, maxDoc); i < maxDoc; i = nextLiveDoc(i + 1, liveDocs, maxDoc)) {
-                    startDocument();
-                    currentDocument = documentsForMerge.get(i);
-                    finishDocument();
-                    ++docCount;
-                }
-            }
-        }
-
-        return docCount;
-    }
-
     private static int nextLiveDoc(int doc, Bits liveDocs, int maxDoc) {
         if (liveDocs == null) {
             return doc;
@@ -137,7 +86,6 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
     @Override
     public void finish(FieldInfos fis, int numDocs) throws IOException {
-
     }
 
     @Override

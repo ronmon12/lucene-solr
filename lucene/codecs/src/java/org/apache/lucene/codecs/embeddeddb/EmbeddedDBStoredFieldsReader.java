@@ -37,32 +37,29 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
     private Directory directory;
     private SegmentInfo si;
-    private FieldInfos fn;
+    private FieldInfos infos;
     private IOContext ioContext;
     private String segmentName;
 
     public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) {
-
         this.directory = directory;
         this.si = si;
-        this.fn = fn;
+        this.infos = fn;
         this.ioContext = context;
-
         segmentName = si.name;
     }
 
     @Override
     public void visitDocument(int n, StoredFieldVisitor visitor) throws IOException {
 
-        DocumentData document = EmbeddedDBStore.INSTANCE.get(segmentName, n);
-        if(null == document) {
-            Logger.LOG(LogLevel.WARN, "No document stored for ID = " + n);
+        EDBDocument document = BerkeleyDBStore.INSTANCE.get(segmentName, n);
+        if(this.infos.size() == 0 || null == document) {
             return;
         }
 
         for(EDBStoredField field : document.getFields()) {
 
-            FieldInfo info = this.fn.fieldInfo(field.getName());
+            FieldInfo info = this.infos.fieldInfo(field.getName());
 
             if(visitor.needsField(info) == StoredFieldVisitor.Status.YES) {
                 if(null != field.getStringValue()) {
@@ -86,18 +83,19 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
                     int endOffset = field.getOffset() + field.getLength();
                     visitor.binaryField(info, Arrays.copyOfRange(field.getBinaryValue(), field.getOffset(), endOffset));
                 }
+                else {
+                    Logger.LOG(LogLevel.WARN, "Field retrieval was attempted, but value was not recognized.");
+                }
             }
             else if(visitor.needsField(info) == STOP) {
                 return;
             }
-
         }
-
     }
 
     @Override
     public StoredFieldsReader clone() {
-        EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.fn, this.ioContext);
+        EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.infos, this.ioContext);
         return reader;
     }
 
@@ -116,9 +114,9 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
         return 0;
     }
 
-    public Map<Integer, DocumentData> getDocumentsForMerge() {
-        final Map<Integer, DocumentData> documentsForMerge = new HashMap<>();
-        documentsForMerge.putAll(EmbeddedDBStore.INSTANCE.getDocumentsForSegment(segmentName));
+    public Map<Integer, EDBDocument> getDocumentsForMerge() {
+        final Map<Integer, EDBDocument> documentsForMerge = new HashMap<>();
+        documentsForMerge.putAll(BerkeleyDBStore.INSTANCE.getDocumentsForSegment(segmentName));
         if(documentsForMerge.size() < 1) {
             Logger.LOG(LogLevel.INFO, "Segment " + si.name + " is returning no documents for merge");
         }
