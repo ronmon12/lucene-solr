@@ -41,7 +41,7 @@
   <property name="moman.url" value="https://bitbucket.org/jpbarrette/moman/get/${moman.commit-hash}.zip" />
 
   <path id="classpath">
-  <pathelement location="${common.dir}/build/codecs/classes/java"/>
+    <pathelement path="lib/je-3.2.76.jar"/>
   </path>
   
   <path id="test.classpath">
@@ -50,7 +50,7 @@
     <path refid="junit-path"/>
     <pathelement location="${build.dir}/classes/java"/>
     <pathelement location="${build.dir}/classes/test"/>
-    <pathelement path="${common.dir}/codecs/lib/je-3.2.76.jar"/>
+    <pathelement path="${common.dir}/core/lib/je-3.2.76.jar"/>
   </path>
 
   <path id="junit.classpath">

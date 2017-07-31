@@ -17,6 +17,7 @@ package org.apache.lucene.store;
  * limitations under the License.
  */
 
+
 import org.apache.lucene.codecs.embeddeddb.BerkeleyDBStore;
 
 /**

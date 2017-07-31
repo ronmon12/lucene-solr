@@ -18,9 +18,4 @@
 -->
 <ivy-module version="2.0">
   <info organisation="org.apache.lucene" module="codecs"/>
-
-  <dependencies>
-    <!-- https://mvnrepository.com/artifact/berkeleydb/je -->
-    <dependency org="berkeleydb" name="je" rev="3.2.76"/>
-  </dependencies>
 </ivy-module>
