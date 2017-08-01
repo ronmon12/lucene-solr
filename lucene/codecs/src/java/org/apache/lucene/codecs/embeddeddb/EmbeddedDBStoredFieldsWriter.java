@@ -24,7 +24,6 @@ import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
-import org.apache.lucene.util.Bits;
 
 /**
  * Created by rlmathes on 7/15/17.
@@ -67,16 +66,6 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
         }
 
         currentDocument.addField(edbStoredField);
-    }
-
-    private static int nextLiveDoc(int doc, Bits liveDocs, int maxDoc) {
-        if (liveDocs == null) {
-            return doc;
-        }
-        while (doc < maxDoc && !liveDocs.get(doc)) {
-            ++doc;
-        }
-        return doc;
     }
 
     @Override

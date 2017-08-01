@@ -19,8 +19,6 @@ package org.apache.lucene.codecs.embeddeddb;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
@@ -112,15 +110,6 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     @Override
     public long ramBytesUsed() {
         return 0;
-    }
-
-    public Map<Integer, EDBDocument> getDocumentsForMerge() {
-        final Map<Integer, EDBDocument> documentsForMerge = new HashMap<>();
-        documentsForMerge.putAll(BerkeleyDBStore.INSTANCE.getDocumentsForSegment(segmentName));
-        if(documentsForMerge.size() < 1) {
-            Logger.LOG(LogLevel.INFO, "Segment " + si.name + " is returning no documents for merge");
-        }
-        return documentsForMerge;
     }
 
 }

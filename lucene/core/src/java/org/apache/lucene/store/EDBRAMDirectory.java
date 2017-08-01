@@ -28,8 +28,7 @@ public class EDBRAMDirectory extends RAMDirectory {
     /** Closes the store to future operations, releasing associated memory. */
     @Override
     public void close() {
-        isOpen = false;
-        fileMap.clear();
+        super.close();
         BerkeleyDBStore.INSTANCE.purge();
     }
 }

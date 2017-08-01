@@ -36,3 +36,16 @@ Two new program arguments are offered for Lucene:
 [x] Implement new codec, will need new writer and reader to go with StoredFieldsFormat... more details TBD
 
 ## Questions
+
+
+## Test Failures
+
+### At large
+Test failures that need to be resolved.
+- [ ] TestDisjunctionMaxQuery.testBooleanSpanQuery
+- [ ] TestIndexWriterReader.testAddIndexes
+
+### Sanctioned
+Test failures that cannot be avoided due to a specific/particular
+attribute of the test.
+- TestIndexFileDeleter.testDeleteLeftoverFiles
