@@ -29,9 +29,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.sun.jndi.ldap.Ber;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.StoredFieldsFormat;
+import org.apache.lucene.codecs.embeddeddb.BerkeleyDBStore;
 import org.apache.lucene.codecs.lucene410.Lucene410Codec;
 import org.apache.lucene.codecs.simpletext.SimpleTextCodec;
 import org.apache.lucene.document.Document;
@@ -161,6 +163,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
           TopDocs hits = s.search(new TermQuery(new Term("id", testID)), 1);
           assertEquals(1, hits.totalHits);
           Document doc = r.document(hits.scoreDocs[0].doc);
+          if(doc.getFields().size() == 0) {
+            BerkeleyDBStore.INSTANCE.printKeyStoreStats();
+          }
           Document docExp = docs.get(testID);
           for(int i=0;i<fieldCount;i++) {
             assertEquals("doc " + testID + ", field f" + fieldCount + " is wrong", docExp.get("f"+i),  doc.get("f"+i));
@@ -561,6 +566,9 @@ public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormat
         continue;
       }
       ++ numDocs;
+      if(doc.getFields().size()==0) {
+        BerkeleyDBStore.INSTANCE.printKeyStoreStats();
+      }
       final int docId = doc.getField("id").numericValue().intValue();
       assertEquals(data[docId].length + 1, doc.getFields().size());
       for (int j = 0; j < data[docId].length; ++j) {

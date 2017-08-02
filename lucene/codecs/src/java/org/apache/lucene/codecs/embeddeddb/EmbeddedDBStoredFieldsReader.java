@@ -36,14 +36,14 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     private Directory directory;
     private SegmentInfo si;
     private FieldInfos infos;
-    private IOContext ioContext;
+    private IOContext context;
     private String segmentName;
 
     public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) {
         this.directory = directory;
         this.si = si;
         this.infos = fn;
-        this.ioContext = context;
+        this.context = context;
         segmentName = si.name;
     }
 
@@ -51,13 +51,13 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     public void visitDocument(int n, StoredFieldVisitor visitor) throws IOException {
 
         EDBDocument document = BerkeleyDBStore.INSTANCE.get(segmentName, n);
-        if(this.infos.size() == 0 || null == document) {
-            return;
-        }
 
         for(EDBStoredField field : document.getFields()) {
 
             FieldInfo info = this.infos.fieldInfo(field.getName());
+            if(null == info) {
+                continue;
+            }
 
             if(visitor.needsField(info) == StoredFieldVisitor.Status.YES) {
                 if(null != field.getStringValue()) {
@@ -93,7 +93,7 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
     @Override
     public StoredFieldsReader clone() {
-        EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.infos, this.ioContext);
+        EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.infos, this.context);
         return reader;
     }
 

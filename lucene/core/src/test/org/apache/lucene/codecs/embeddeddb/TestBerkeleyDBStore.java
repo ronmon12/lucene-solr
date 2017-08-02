@@ -46,28 +46,25 @@ public class TestBerkeleyDBStore {
         field.setStringValue("test_value");
         document.addField(field);
         BerkeleyDBStore.INSTANCE.put(segmentName, document);
-        Map<String, List<EDBDocumentKey>> keyStore = BerkeleyDBStore.INSTANCE.getKeyStore();
+        Map<String, Integer> index = BerkeleyDBStore.INSTANCE.getIndex();
+        Assert.assertEquals(1, index.size());
+        Assert.assertTrue(index.containsKey(segmentName));
+        Assert.assertEquals((Integer) docID, index.get(segmentName));
 
-        Assert.assertEquals(1, keyStore.size());
-        Assert.assertTrue(keyStore.containsKey(segmentName));
-        Assert.assertEquals(docID, keyStore.get(segmentName).get(0).getDocumentID());
-
-        /* Test disabled until a non in-memory option is available for BerkeleyDBStore
+        /* Test disabled until non-in memory option available for Berkeley
         BerkeleyDBStore.INSTANCE.close();
         BerkeleyDBStore.INSTANCE.reinitialize();
-        keyStore = BerkeleyDBStore.INSTANCE.getKeyStore();
-
-        Assert.assertEquals(1, keyStore.size());
-        Assert.assertTrue(keyStore.containsKey(segmentName));
-        Assert.assertEquals(docID, keyStore.get(segmentName).get(0).getDocumentID());
+        index = BerkeleyDBStore.INSTANCE.getIndex();
+        Assert.assertEquals(1, index.size());
+        Assert.assertTrue(index.containsKey(segmentName));
+        Assert.assertEquals((Integer) docID, index.get(segmentName));
         */
 
         BerkeleyDBStore.INSTANCE.purge();
         BerkeleyDBStore.INSTANCE.close();
         BerkeleyDBStore.INSTANCE.reinitialize();
-        keyStore = BerkeleyDBStore.INSTANCE.getKeyStore();
-
-        Assert.assertEquals(0, keyStore.size());
+        index = BerkeleyDBStore.INSTANCE.getIndex();
+        Assert.assertEquals(0, index.size());
     }
 
     @Test

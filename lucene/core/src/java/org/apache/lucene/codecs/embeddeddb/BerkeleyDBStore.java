@@ -1,9 +1,7 @@
 package org.apache.lucene.codecs.embeddeddb;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -52,13 +50,13 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
     private final Properties properties = new Properties();
     private final String PATH_EMBEDDEDDB_STORE = "tmp_lucene_embedded_store_directory";
 
-    private Map<String, List<EDBDocumentKey>> keyStore = new HashMap<>();
+    private Map<String, Integer> index = new HashMap<>();
 
     private Database documentStoreDatabase;
     private EntryBinding documentKeyBinding;
     private EntryBinding documentDataBinding;
-    private EntryBinding keyStoreBinding;
-    private EntryBinding keyStoreKeyBinding;
+    private EntryBinding indexBinding;
+    private EntryBinding indexKeyBinding;
     private final String DBNAME_DOCUMENT_STORE = "document_store";
 
     BerkeleyDBStore() {
@@ -123,17 +121,18 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
 
         documentKeyBinding = new SerialBinding(storedClassCatalog, EDBDocumentKey.class);
         documentDataBinding = new SerialBinding(storedClassCatalog, EDBDocument.class);
-        keyStoreBinding = new SerialBinding(storedClassCatalog, Map.class);
-        keyStoreKeyBinding = new SerialBinding(storedClassCatalog, String.class);
-        loadKeyStore();
+        indexBinding = new SerialBinding(storedClassCatalog, Map.class);
+        indexKeyBinding = new SerialBinding(storedClassCatalog, String.class);
+        loadIndex();
     }
 
     public void put(final String segmentName, final EDBDocument document) {
 
         int docID = 0;
-        if(keyStore.containsKey(segmentName)) {
-            docID = keyStore.get(segmentName).size();
+        if(index.containsKey(segmentName)) {
+            docID = index.get(segmentName) + 1;
         }
+
         final EDBDocumentKey edbDocumentKey = new EDBDocumentKey(segmentName, docID);
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
@@ -142,15 +141,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
 
         try {
             documentStoreDatabase.put(null, entryKey, entryData);
-            if(keyStore.containsKey(segmentName)) {
-                keyStore.get(segmentName).add(edbDocumentKey);
-            }
-            else {
-                List<EDBDocumentKey> keys = new ArrayList<>();
-                keys.add(edbDocumentKey);
-                keyStore.put(segmentName, keys);
-            }
-
+            index.put(segmentName, docID);
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the document store.");
         }
@@ -174,70 +165,59 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         return document;
     }
 
-    public Map<Integer, EDBDocument> getDocumentsForSegment(final String segmentName) {
-
-        Map<Integer, EDBDocument> documentSet = new HashMap<>();
-
-        for(EDBDocumentKey key : keyStore.get(segmentName)) {
-            documentSet.put(key.getDocumentID(), get(key.getSegmentName(), key.getDocumentID()));
-        }
-
-        return documentSet;
-    }
-
-    private void persistKeyStore() {
+    private void persistIndex() {
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
-        keyStoreBinding.objectToEntry(keyStore, entryData);
-        keyStoreKeyBinding.objectToEntry("keystore", entryKey);
+        indexBinding.objectToEntry(index, entryData);
+        indexKeyBinding.objectToEntry("index", entryKey);
 
         try {
             documentStoreDatabase.put(null, entryKey, entryData);
         }
         catch(DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to insert keystore into database.");
+            Logger.LOG(LogLevel.ERROR, "Failed to insert index into database.");
         }
     }
 
-    private void loadKeyStore() {
-        Map<String, List<EDBDocumentKey>> loadedKeyStore = new HashMap<>();
+    private void loadIndex() {
+        Map<String, Integer> loadedIndex = new HashMap<>();
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
-        keyStoreBinding.objectToEntry(loadedKeyStore, entryData);
-        keyStoreKeyBinding.objectToEntry("keystore", entryKey);
+        indexBinding.objectToEntry(loadedIndex, entryData);
+        indexKeyBinding.objectToEntry("index", entryKey);
 
         try {
             documentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
-            loadedKeyStore = (Map<String, List<EDBDocumentKey>>) keyStoreBinding.entryToObject(entryData);
-            this.keyStore = loadedKeyStore;
-            if(loadedKeyStore.size() == 0) {
-                Logger.LOG(LogLevel.INFO, "No existing keystore, creating new keystore for the database.");
+            loadedIndex = (Map<String, Integer>) indexBinding.entryToObject(entryData);
+            this.index = loadedIndex;
+            if(index.size() == 0) {
+                Logger.LOG(LogLevel.INFO, "No existing index, creating new index for the database.");
             }
             else {
-                Logger.LOG(LogLevel.INFO, "Loading existing keystore from the database.");
+                Logger.LOG(LogLevel.INFO, "Loading existing index from the database.");
             }
         }
         catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to load keystore from the database.");
+            Logger.LOG(LogLevel.ERROR, "Failed to load index from the database.");
         }
 
     }
 
     public void printKeyStoreStats() {
-        for(Map.Entry<String, List<EDBDocumentKey>> entry : keyStore.entrySet()) {
-            System.out.println("Segment " + entry.getKey() + " contains " + entry.getValue().size() + " document keys");
+        for(Map.Entry<String, Integer> entry : index.entrySet()) {
+            System.out.println("Segment " + entry.getKey() + " contains " + entry.getValue() + " document keys");
         }
     }
 
     public void close() {
         /*
-         * Currently persisting keystore only at database close; this does pose a risk if the database should
-         * shut down unexpectedly, in which case the keystore would not match the database contents. Decide whether to
-         * take a performance hit and persist the keystore every database.put, or have a disaster recovery
-         * method "rebuildKeyStore" which would recreate the keystore from the contents in the database.
+         * Currently persisting index only at database close; this does pose a risk if the database should
+         * shut down unexpectedly, in which case the index would not match the database contents. Decide whether to
+         * take a performance hit and persist the index every database.put, or have a disaster recovery
+         * method "rebuildIndex" which would recreate the index from the contents in the database.
          *
          */
-        persistKeyStore();
+        persistIndex();
 
         try {
             documentStoreDatabase.close();
@@ -264,7 +244,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         return documentStoreDatabase;
     }
 
-    Map<String, List<EDBDocumentKey>> getKeyStore() {
-        return keyStore;
+    Map<String, Integer> getIndex() {
+        return index;
     }
 }

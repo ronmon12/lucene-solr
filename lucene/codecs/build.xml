@@ -27,5 +27,9 @@
     <pathelement path="lib/je-3.2.76.jar"/>
   </path>
 
+  <path id="test.classpath">
+    <pathelement location="${common.dir}/build/core/classes/java"/>
+  </path>
+
   <target name="-dist-maven" depends="-dist-maven-src-java"/>
 </project>
