@@ -18,8 +18,6 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 
 import java.util.List;
-import java.util.Map;
-
 import com.sleepycat.je.Database;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,48 +35,20 @@ public class TestBerkeleyDBStore {
     }
 
     @Test
-    public void keysAndInitialization() {
-
-        String segmentName = "seg_1";
-        EDBDocument document = new EDBDocument();
-        int docID = 0;
-        EDBStoredField field = new EDBStoredField();
-        field.setStringValue("test_value");
-        document.addField(field);
-        BerkeleyDBStore.INSTANCE.put(segmentName, document);
-        Map<String, Integer> index = BerkeleyDBStore.INSTANCE.getIndex();
-        Assert.assertEquals(1, index.size());
-        Assert.assertTrue(index.containsKey(segmentName));
-        Assert.assertEquals((Integer) docID, index.get(segmentName));
-
-        /* Test disabled until non-in memory option available for Berkeley
-        BerkeleyDBStore.INSTANCE.close();
-        BerkeleyDBStore.INSTANCE.reinitialize();
-        index = BerkeleyDBStore.INSTANCE.getIndex();
-        Assert.assertEquals(1, index.size());
-        Assert.assertTrue(index.containsKey(segmentName));
-        Assert.assertEquals((Integer) docID, index.get(segmentName));
-        */
-
-        BerkeleyDBStore.INSTANCE.purge();
-        BerkeleyDBStore.INSTANCE.close();
-        BerkeleyDBStore.INSTANCE.reinitialize();
-        index = BerkeleyDBStore.INSTANCE.getIndex();
-        Assert.assertEquals(0, index.size());
-    }
-
-    @Test
     public void putAndGet() {
 
         String segmentName = "seg_1";
-        EDBDocument document = new EDBDocument();
         int docID = 0;
+        StringBuilder documentKey = new StringBuilder(segmentName);
+        documentKey.append(docID);
+
+        EDBDocument document = new EDBDocument();
         EDBStoredField field = new EDBStoredField();
         field.setStringValue("test_value");
         document.addField(field);
-        BerkeleyDBStore.INSTANCE.put(segmentName, document);
+        BerkeleyDBStore.INSTANCE.put(documentKey.toString(), document);
 
-        List<EDBStoredField> fields = BerkeleyDBStore.INSTANCE.get(segmentName, docID).getFields();
+        List<EDBStoredField> fields = BerkeleyDBStore.INSTANCE.get(documentKey.toString()).getFields();
         Assert.assertEquals("test_value", fields.get(0).getStringValue());
     }
 

@@ -24,6 +24,7 @@ import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.SegmentInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
+import org.apache.lucene.store.CompoundFileDirectory;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import static org.apache.lucene.index.StoredFieldVisitor.Status.STOP;
@@ -37,20 +38,35 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     private SegmentInfo si;
     private FieldInfos infos;
     private IOContext context;
-    private String segmentName;
+    private String readHandle;
 
     public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) {
+
         this.directory = directory;
         this.si = si;
         this.infos = fn;
         this.context = context;
-        segmentName = si.name;
+
+        StringBuilder handleBuilder;
+        if(directory instanceof CompoundFileDirectory) {
+            final CompoundFileDirectory compoundFileDirectory = (CompoundFileDirectory) directory;
+            handleBuilder = new StringBuilder(compoundFileDirectory.getDirectory().getLockID());
+        }
+        else {
+            handleBuilder = new StringBuilder(directory.getLockID());
+        }
+        handleBuilder.append("_");
+        handleBuilder.append(si.name);
+        readHandle = handleBuilder.toString();
     }
 
     @Override
     public void visitDocument(int n, StoredFieldVisitor visitor) throws IOException {
 
-        EDBDocument document = BerkeleyDBStore.INSTANCE.get(segmentName, n);
+        StringBuilder documentKeyBuilder = new StringBuilder(readHandle);
+        documentKeyBuilder.append("_");
+        documentKeyBuilder.append(n);
+        EDBDocument document = BerkeleyDBStore.INSTANCE.get(documentKeyBuilder.toString());
 
         for(EDBStoredField field : document.getFields()) {
 

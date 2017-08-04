@@ -30,11 +30,15 @@ import org.apache.lucene.store.IOContext;
  */
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
-    private String segmentName;
+    private String writerHandle;
     private EDBDocument currentDocument;
+    private int documentID = 0;
 
     public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
-        segmentName = segment;
+        final StringBuilder handleBuilder = new StringBuilder(directory.getLockID());
+        handleBuilder.append("_");
+        handleBuilder.append(segment);
+        writerHandle = handleBuilder.toString();
     }
 
     @Override
@@ -44,7 +48,11 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
     @Override
     public void finishDocument() throws IOException {
-        BerkeleyDBStore.INSTANCE.put(segmentName, currentDocument);
+        StringBuilder documentKeyBuilder = new StringBuilder(writerHandle);
+        documentKeyBuilder.append("_");
+        documentKeyBuilder.append(documentID);
+        BerkeleyDBStore.INSTANCE.put(documentKeyBuilder.toString(), currentDocument);
+        documentID++;
     }
 
     @Override

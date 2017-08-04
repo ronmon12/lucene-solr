@@ -25,17 +25,16 @@ public interface EmbeddedDBStore {
     /**
      * Method will store a document object in the key/value database, using the given segment name and document ID
      *
-     * @param segmentName - Name of segment the stored document is associated with
+     * @param documentKey - A string Key used to retrieve a single document from the database
      * @param document - The object representative of the lucene document being stored
      */
-    void put(final String segmentName, final EDBDocument document);
+    void put(final String documentKey, final EDBDocument document);
 
     /**
      * Method will return the desired document object based on the given segment name and document ID
      *
-     * @param segmentName - Name of segment the stored document is associated with
-     * @param docID - The iterative ID of the document being stored
+     * @param documentKey - Document key the desired document is associated with
      * @return - Returns a document object
      */
-    EDBDocument get(final String segmentName, final int docID);
+    EDBDocument get(final String documentKey);
 }

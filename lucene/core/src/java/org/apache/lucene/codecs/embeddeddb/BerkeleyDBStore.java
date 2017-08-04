@@ -50,13 +50,9 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
     private final Properties properties = new Properties();
     private final String PATH_EMBEDDEDDB_STORE = "tmp_lucene_embedded_store_directory";
 
-    private Map<String, Integer> index = new HashMap<>();
-
     private Database documentStoreDatabase;
     private EntryBinding documentKeyBinding;
     private EntryBinding documentDataBinding;
-    private EntryBinding indexBinding;
-    private EntryBinding indexKeyBinding;
     private final String DBNAME_DOCUMENT_STORE = "document_store";
 
     BerkeleyDBStore() {
@@ -114,46 +110,34 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             documentStoreDatabase = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
             storedClassCatalog = new StoredClassCatalog(documentStoreDatabase);
-            Logger.LOG(LogLevel.DEBUG, "Database initialized with a record count of: " + documentStoreDatabase.count());
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to access the requested database from the environment.");
         }
 
-        documentKeyBinding = new SerialBinding(storedClassCatalog, EDBDocumentKey.class);
+        documentKeyBinding = new SerialBinding(storedClassCatalog, String.class);
         documentDataBinding = new SerialBinding(storedClassCatalog, EDBDocument.class);
-        indexBinding = new SerialBinding(storedClassCatalog, Map.class);
-        indexKeyBinding = new SerialBinding(storedClassCatalog, String.class);
-        loadIndex();
     }
 
-    public void put(final String segmentName, final EDBDocument document) {
+    public void put(final String documentKey, final EDBDocument document) {
 
-        int docID = 0;
-        if(index.containsKey(segmentName)) {
-            docID = index.get(segmentName) + 1;
-        }
-
-        final EDBDocumentKey edbDocumentKey = new EDBDocumentKey(segmentName, docID);
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
-        documentKeyBinding.objectToEntry(edbDocumentKey, entryKey);
+        documentKeyBinding.objectToEntry(documentKey, entryKey);
         documentDataBinding.objectToEntry(document, entryData);
 
         try {
             documentStoreDatabase.put(null, entryKey, entryData);
-            index.put(segmentName, docID);
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the document store.");
         }
     }
 
-    public EDBDocument get(final String segmentName, final int docID) {
+    public EDBDocument get(final String documentKey) {
 
-        final EDBDocumentKey edbDocumentKey = new EDBDocumentKey(segmentName, docID);
         EDBDocument document = new EDBDocument();
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
-        documentKeyBinding.objectToEntry(edbDocumentKey, entryKey);
+        documentKeyBinding.objectToEntry(documentKey, entryKey);
         documentDataBinding.objectToEntry(document, entryData);
 
         try {
@@ -165,59 +149,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         return document;
     }
 
-    private void persistIndex() {
-        final DatabaseEntry entryKey = new DatabaseEntry();
-        final DatabaseEntry entryData = new DatabaseEntry();
-        indexBinding.objectToEntry(index, entryData);
-        indexKeyBinding.objectToEntry("index", entryKey);
-
-        try {
-            documentStoreDatabase.put(null, entryKey, entryData);
-        }
-        catch(DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to insert index into database.");
-        }
-    }
-
-    private void loadIndex() {
-        Map<String, Integer> loadedIndex = new HashMap<>();
-        final DatabaseEntry entryKey = new DatabaseEntry();
-        final DatabaseEntry entryData = new DatabaseEntry();
-        indexBinding.objectToEntry(loadedIndex, entryData);
-        indexKeyBinding.objectToEntry("index", entryKey);
-
-        try {
-            documentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
-            loadedIndex = (Map<String, Integer>) indexBinding.entryToObject(entryData);
-            this.index = loadedIndex;
-            if(index.size() == 0) {
-                Logger.LOG(LogLevel.INFO, "No existing index, creating new index for the database.");
-            }
-            else {
-                Logger.LOG(LogLevel.INFO, "Loading existing index from the database.");
-            }
-        }
-        catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to load index from the database.");
-        }
-
-    }
-
-    public void printKeyStoreStats() {
-        for(Map.Entry<String, Integer> entry : index.entrySet()) {
-            System.out.println("Segment " + entry.getKey() + " contains " + entry.getValue() + " document keys");
-        }
-    }
-
     public void close() {
-        /*
-         * Currently persisting index only at database close; this does pose a risk if the database should
-         * shut down unexpectedly, in which case the index would not match the database contents. Decide whether to
-         * take a performance hit and persist the index every database.put, or have a disaster recovery
-         * method "rebuildIndex" which would recreate the index from the contents in the database.
-         *
-         */
-        persistIndex();
 
         try {
             documentStoreDatabase.close();
@@ -233,7 +165,6 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
             documentStoreDatabase.close();
             environment.truncateDatabase(null, DBNAME_DOCUMENT_STORE, true);
             initializeDatabases();
-            Logger.LOG(LogLevel.INFO, "Truncating the document store.");
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to truncate the document store");
         }
@@ -244,7 +175,4 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         return documentStoreDatabase;
     }
 
-    Map<String, Integer> getIndex() {
-        return index;
-    }
 }
