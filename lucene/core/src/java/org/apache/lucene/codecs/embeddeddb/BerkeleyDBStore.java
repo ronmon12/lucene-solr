@@ -1,8 +1,6 @@
 package org.apache.lucene.codecs.embeddeddb;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 import com.sleepycat.bind.EntryBinding;
@@ -48,7 +46,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
     private DatabaseConfig databaseConfig;
     private StoredClassCatalog storedClassCatalog;
     private final Properties properties = new Properties();
-    private final String PATH_EMBEDDEDDB_STORE = "tmp_lucene_embedded_store_directory";
+    private final String PATH_BERKELEYDB_DIRECTORY = "tmp_lucene_embedded_store_directory";
 
     private Database documentStoreDatabase;
     private EntryBinding documentKeyBinding;
@@ -66,31 +64,29 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
 
     private void initializeEnvironment() {
 
-        /*
-         *  Currently Berkeley will always start in in-memory mode. Need to either figure out how to introduce
-         *  VM arguments to the lucene test framework, or provide a default configuration file that can be
-         *  overriden to specify disk persistence
-         *
-         */
-        properties.put(BerkeleyDBCoreConstants.LOG_MEM_ONLY, "true");
+        String berkeleyDir = System.getProperty("berkeleyDir");
+        if(null == berkeleyDir) {
+            berkeleyDir = PATH_BERKELEYDB_DIRECTORY;
+        }
+        else if(berkeleyDir.equals("RAM")) {
+            properties.put(BerkeleyDBCoreConstants.LOG_MEM_ONLY, "true");
+            Logger.LOG(LogLevel.INFO, "Initializing BerkeleyDB in memory-only mode");
+        }
+
+        //TODO: These properties need to be enabled by default... but how do we disable for tests
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_CHECKPOINTER, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_CLEANER, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_EVICTOR, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_IN_COMPRESSOR, "false");
         Logger.LOG(LogLevel.INFO, "Starting Lucene embedded database in testing mode. " +
                     "Background threads and disk persistence disabled.");
-
         environmentConfig = new EnvironmentConfig(properties);
         environmentConfig.setAllowCreate(true);
 
-        String luceneEmbeddedDBStoreDirectory = System.getProperty("luceneEmbeddedDBStoreDirectory");
-        if(null == luceneEmbeddedDBStoreDirectory) {
-            luceneEmbeddedDBStoreDirectory = PATH_EMBEDDEDDB_STORE;
-        }
-        final File storeFile = new File(luceneEmbeddedDBStoreDirectory);
+        final File storeFile = new File(berkeleyDir);
         try {
             storeFile.mkdir();
-            Logger.LOG(LogLevel.INFO, "Directory created for Lucene embedded database.");
+            Logger.LOG(LogLevel.INFO, "Lucene's BerkeleyDB initialized with directory: " + berkeleyDir);
         }
         catch(SecurityException e) {
             Logger.LOG(LogLevel.ERROR, "Security violation occurred while trying to create the embedded database directory.");

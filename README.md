@@ -7,7 +7,7 @@ ant compile
 
 2. To test the custom codec, navigate to the lucene directory and run the following ant command with VM arguments:
 
-ant test -Dtests.codec=EmbeddedDB -Dtests.directory=EDBRAMDirectory
+ant test -Dtests.codec=EmbeddedDB
 
 ## Using
 
@@ -15,8 +15,7 @@ Two new program arguments are offered for Lucene:
 
 | Program Argument                     | Description |
 | ------------------------------------ | ----------- |
-| -DluceneEmbeddedDBMemOnly (disabled) | This program argument is disabled, currently in-memory is always the mode|
-| -DluceneEmbeddedDBStoreDirectory     | Specify an output directory for the embedded database, if not specified a default directory will be made |
+| -DberkeleyDir    | Specify an output directory for the embedded database, if not specified a default directory will be made. If keyword "RAM" is specified, BerkeleyDB will run in-memory only |
 
 ## Todo List
 [x] Clone lucene-solr project in my space and create new branch
@@ -36,16 +35,19 @@ Two new program arguments are offered for Lucene:
 [x] Implement new codec, will need new writer and reader to go with StoredFieldsFormat... more details TBD
 
 ## Questions
-
+None
 
 ## Test Failures
+| Test                            | Reason      | Plans       |
+| --------------------------------| ----------- | ----------- |
+| TestFieldsReader.testExceptions | Unsure | Possibly address |
+| TestIndexFileDeleter.testDeleteLeftoverFiles | Test relies on files| Ignore |
+| TestIndexWriterDelete.testErrorInDocsWriterAdd | I don't think this test applies to my codec | Ignore |
+| TestIndexWriterMerging.testLucene | Not codec agnostic | Ignore - sanctioned per Caleb |
+| TestIndexWriterOnDiskFull.testImmediateDiskFull | Not codec agnostic | Ignore - sanctioned per Caleb |
+| TestIndexWriterReader.testAddIndexes | Copying indexes between directories, needs investigation| Possibly address |
+| TestIndexWriterUnicode.testInvalidUTF16 | Need to look into how I'm storing various UTF's | Address |
+| TestSizeBoundedForceMerge.testByteSizeLimit | This test depends on expected files created by codec | Addressed - test can be ignored |
+| OutOfMemoryError's | Cause my in-memory only BerkeleyDB | Addressed - reinstated traditional mode as default, now that the keys are corrected |
+| TestRAMDirectory.testRAMDirectory | Uses a buildIndex() test method, is this a test flaw or design flaw? | Possibly address |
 
-### At large
-Test failures that need to be resolved.
-- [ ] TestDisjunctionMaxQuery.testBooleanSpanQuery
-- [ ] TestIndexWriterReader.testAddIndexes
-
-### Sanctioned
-Test failures that cannot be avoided due to a specific/particular
-attribute of the test.
-- TestIndexFileDeleter.testDeleteLeftoverFiles
