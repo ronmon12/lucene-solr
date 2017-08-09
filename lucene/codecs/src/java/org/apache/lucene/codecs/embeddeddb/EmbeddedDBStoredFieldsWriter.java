@@ -18,27 +18,51 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 
 import java.io.IOException;
+import java.util.UUID;
 import org.apache.lucene.codecs.StoredFieldsWriter;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
+import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
+import org.apache.lucene.store.IndexOutput;
+import org.apache.lucene.util.IOUtils;
 
 /**
  * Created by rlmathes on 7/15/17.
  */
 public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
+    /** Extension of stored fields file */
+    public static final String FIELDS_EXTENSION = "fdt";
     private String writerHandle;
     private EDBDocument currentDocument;
     private int documentID = 0;
+    private Directory directory;
+    private String segment;
+    private IndexOutput fieldsStream;
 
-    public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) {
-        final StringBuilder handleBuilder = new StringBuilder(directory.getLockID());
-        handleBuilder.append("_");
-        handleBuilder.append(segment);
-        writerHandle = handleBuilder.toString();
+    public EmbeddedDBStoredFieldsWriter(Directory directory, String segment, IOContext context) throws IOException {
+
+        this.directory = directory;
+        this.segment = segment;
+        boolean success = false;
+        try {
+            fieldsStream = directory.createOutput(IndexFileNames.segmentFileName(segment, "", FIELDS_EXTENSION), context);
+            UUID writerUUID = UUID.randomUUID();
+            fieldsStream.writeString(writerUUID.toString());
+            fieldsStream.close();
+            final StringBuilder handleBuilder = new StringBuilder(writerUUID.toString());
+            handleBuilder.append("_");
+            handleBuilder.append(segment);
+            writerHandle = handleBuilder.toString();
+            success = true;
+        } finally {
+            if (!success) {
+                abort();
+            }
+        }
     }
 
     @Override
@@ -78,7 +102,11 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
 
     @Override
     public void abort() {
-
+        try {
+            close();
+        } catch (Throwable ignored) {}
+        IOUtils.deleteFilesIgnoringExceptions(directory,
+                IndexFileNames.segmentFileName(segment, "", FIELDS_EXTENSION));
     }
 
     @Override
@@ -86,7 +114,11 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
     }
 
     @Override
-    public void close() {
-
+    public void close() throws IOException {
+        try {
+            IOUtils.close(fieldsStream);
+        } finally {
+            fieldsStream = null;
+        }
     }
 }

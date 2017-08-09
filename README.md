@@ -40,14 +40,14 @@ None
 ## Test Failures
 | Test                            | Reason      | Plans       |
 | --------------------------------| ----------- | ----------- |
-| TestFieldsReader.testExceptions | Unsure | Possibly address |
-| TestIndexFileDeleter.testDeleteLeftoverFiles | Test relies on files| Ignore |
-| TestIndexWriterDelete.testErrorInDocsWriterAdd | I don't think this test applies to my codec | Ignore |
+| TestFieldsReader.testExceptions | Unsure | Address |
+| TestIndexFileDeleter.testDeleteLeftoverFiles | Test relies on files| Fixed |
+| TestIndexWriterDelete.testErrorInDocsWriterAdd | I don't think this test applies to my codec | Fixed |
 | TestIndexWriterMerging.testLucene | Not codec agnostic | Ignore - sanctioned per Caleb |
-| TestIndexWriterOnDiskFull.testImmediateDiskFull | Not codec agnostic | Ignore - sanctioned per Caleb |
-| TestIndexWriterReader.testAddIndexes | Copying indexes between directories, needs investigation| Possibly address |
+| TestIndexWriterOnDiskFull.testImmediateDiskFull | Not codec agnostic | Fixed |
+| TestIndexWriterReader.testAddIndexes | Copying indexes between directories, needs investigation| Address|
 | TestIndexWriterUnicode.testInvalidUTF16 | Need to look into how I'm storing various UTF's | Address |
 | TestSizeBoundedForceMerge.testByteSizeLimit | This test depends on expected files created by codec | Addressed - test can be ignored |
 | OutOfMemoryError's | Cause my in-memory only BerkeleyDB | Addressed - reinstated traditional mode as default, now that the keys are corrected |
-| TestRAMDirectory.testRAMDirectory | Uses a buildIndex() test method, is this a test flaw or design flaw? | Possibly address |
+| TestRAMDirectory.testRAMDirectory | Uses a buildIndex() test method, is this a test flaw or design flaw? | Addressed, altered read and write handles to persist beyond a Directory|
 

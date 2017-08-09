@@ -22,11 +22,14 @@ import java.util.Arrays;
 import org.apache.lucene.codecs.StoredFieldsReader;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
+import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentInfo;
 import org.apache.lucene.index.StoredFieldVisitor;
-import org.apache.lucene.store.CompoundFileDirectory;
+import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
+import org.apache.lucene.store.IndexInput;
+import org.apache.lucene.util.IOUtils;
 import static org.apache.lucene.index.StoredFieldVisitor.Status.STOP;
 
 /**
@@ -34,30 +37,54 @@ import static org.apache.lucene.index.StoredFieldVisitor.Status.STOP;
  */
 public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
+    /** Extension of stored fields file */
+    public static final String FIELDS_EXTENSION = "fdt";
     private Directory directory;
     private SegmentInfo si;
     private FieldInfos infos;
     private IOContext context;
     private String readHandle;
+    private IndexInput fieldsStream;
+    private boolean closed;
 
-    public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) {
+    /** Used only by clone. */
+    private EmbeddedDBStoredFieldsReader(FieldInfos fieldInfos, IndexInput fieldsStream, String readHandle) {
+        this.infos = fieldInfos;
+        this.fieldsStream = fieldsStream;
+        this.readHandle = readHandle;
+    }
+
+    /** Main constructor */
+    public EmbeddedDBStoredFieldsReader(Directory directory, SegmentInfo si, FieldInfos fn, IOContext context) throws IOException {
 
         this.directory = directory;
         this.si = si;
         this.infos = fn;
         this.context = context;
+        boolean success = false;
 
-        StringBuilder handleBuilder;
-        if(directory instanceof CompoundFileDirectory) {
-            final CompoundFileDirectory compoundFileDirectory = (CompoundFileDirectory) directory;
-            handleBuilder = new StringBuilder(compoundFileDirectory.getDirectory().getLockID());
+        try {
+            fieldsStream = directory.openInput(IndexFileNames.segmentFileName(si.name, "", FIELDS_EXTENSION), context);
+            final String writerUUID = fieldsStream.readString();
+            fieldsStream.close();
+            final StringBuilder handleBuilder = new StringBuilder(writerUUID);
+            handleBuilder.append("_");
+            handleBuilder.append(si.name);
+            readHandle = handleBuilder.toString();
+            success = true;
+        } finally {
+            // With lock-less commits, it's entirely possible (and
+            // fine) to hit a FileNotFound exception above. In
+            // this case, we want to explicitly close any subset
+            // of things that were opened so that we don't have to
+            // wait for a GC to do so.
+            if (!success) {
+                try {
+                    close();
+                } catch (Throwable t) {} // ensure we throw our original exception
+            }
         }
-        else {
-            handleBuilder = new StringBuilder(directory.getLockID());
-        }
-        handleBuilder.append("_");
-        handleBuilder.append(si.name);
-        readHandle = handleBuilder.toString();
+
     }
 
     @Override
@@ -109,8 +136,17 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
     @Override
     public StoredFieldsReader clone() {
-        EmbeddedDBStoredFieldsReader reader = new EmbeddedDBStoredFieldsReader(this.directory, this.si, this.infos, this.context);
-        return reader;
+        ensureOpen();
+        return new EmbeddedDBStoredFieldsReader(this.infos, this.fieldsStream, this.readHandle);
+    }
+
+    /**
+     * @throws AlreadyClosedException if this FieldsReader is closed
+     */
+    private void ensureOpen() throws AlreadyClosedException {
+        if (closed) {
+            throw new AlreadyClosedException("this FieldsReader is closed");
+        }
     }
 
     @Override
@@ -118,9 +154,18 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
     }
 
+    /**
+     * Closes the underlying {@link org.apache.lucene.store.IndexInput} streams.
+     * This means that the Fields values will not be accessible.
+     *
+     * @throws IOException If an I/O error occurs
+     */
     @Override
-    public void close() throws IOException {
-
+    public final void close() throws IOException {
+        if (!closed) {
+            IOUtils.close(fieldsStream);
+            closed = true;
+        }
     }
 
     @Override

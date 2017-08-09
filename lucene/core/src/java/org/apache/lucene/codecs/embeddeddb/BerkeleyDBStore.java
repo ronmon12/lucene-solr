@@ -128,6 +128,17 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         }
     }
 
+    public void delete(final String documentKey) {
+        final DatabaseEntry entryKey = new DatabaseEntry();
+        documentKeyBinding.objectToEntry(documentKey, entryKey);
+
+        try {
+            documentStoreDatabase.delete(null, entryKey);
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Failed to delete entry from the document store.");
+        }
+    }
+
     public EDBDocument get(final String documentKey) {
 
         EDBDocument document = new EDBDocument();
