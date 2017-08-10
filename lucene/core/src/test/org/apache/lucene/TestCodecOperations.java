@@ -95,7 +95,6 @@ public class TestCodecOperations extends LuceneTestCase {
 
     Assert.assertEquals(field.numericValue(), readDocuments.get(3).getField("vehiclesCount").numericValue());
     directory.close();
-    BerkeleyDBStore.INSTANCE.purge();
   }
 
   @Test
@@ -142,7 +141,6 @@ public class TestCodecOperations extends LuceneTestCase {
     segmentReader2.close();
 
     directory.close();
-    BerkeleyDBStore.INSTANCE.purge();
   }
 
   @Test
@@ -184,6 +182,6 @@ public class TestCodecOperations extends LuceneTestCase {
 
     ireader.close();
     directory.close();
-    BerkeleyDBStore.INSTANCE.purge();
+
   }
 }

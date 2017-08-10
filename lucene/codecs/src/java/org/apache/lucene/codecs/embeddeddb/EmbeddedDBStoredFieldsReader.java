@@ -46,12 +46,15 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     private String readHandle;
     private IndexInput fieldsStream;
     private boolean closed;
+    private boolean clone = false;
 
     /** Used only by clone. */
-    private EmbeddedDBStoredFieldsReader(FieldInfos fieldInfos, IndexInput fieldsStream, String readHandle) {
+    private EmbeddedDBStoredFieldsReader(FieldInfos fieldInfos, IndexInput fieldsStream, String readHandle, IOContext context) {
         this.infos = fieldInfos;
         this.fieldsStream = fieldsStream;
         this.readHandle = readHandle;
+        this.context = context;
+        clone=true;
     }
 
     /** Main constructor */
@@ -95,6 +98,10 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
         documentKeyBuilder.append(n);
         EDBDocument document = BerkeleyDBStore.INSTANCE.get(documentKeyBuilder.toString());
 
+        if(clone && context.context.equals(IOContext.Context.MERGE)) {
+            BerkeleyDBStore.INSTANCE.delete(documentKeyBuilder.toString());
+        }
+
         for(EDBStoredField field : document.getFields()) {
 
             FieldInfo info = this.infos.fieldInfo(field.getName());
@@ -137,7 +144,7 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     @Override
     public StoredFieldsReader clone() {
         ensureOpen();
-        return new EmbeddedDBStoredFieldsReader(this.infos, this.fieldsStream, this.readHandle);
+        return new EmbeddedDBStoredFieldsReader(this.infos, this.fieldsStream, this.readHandle, this.context);
     }
 
     /**
