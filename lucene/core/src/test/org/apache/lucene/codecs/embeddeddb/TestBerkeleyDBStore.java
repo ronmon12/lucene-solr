@@ -28,14 +28,14 @@ import org.junit.Test;
 public class TestBerkeleyDBStore {
 
     @Test
-    public void getStore() throws Exception {
+    public void testGetStore() throws Exception {
 
         Database store = BerkeleyDBStore.INSTANCE.getStore();
         Assert.assertEquals("document_store", store.getDatabaseName());
     }
 
     @Test
-    public void putAndGet() {
+    public void testPutAndGet() {
 
         String segmentName = "seg_1";
         int docID = 0;
@@ -50,6 +50,32 @@ public class TestBerkeleyDBStore {
 
         List<EDBStoredField> fields = BerkeleyDBStore.INSTANCE.get(documentKey.toString()).getFields();
         Assert.assertEquals("test_value", fields.get(0).getStringValue());
+    }
+
+    @Test
+    public void testHandleIndex() {
+
+        BerkeleyDBStore.INSTANCE.purgeAllDocuments();
+
+        String handle = "test-handle-1";
+        for(int i = 0; i < 100; i++) {
+            StringBuilder documentKey = new StringBuilder(handle);
+            documentKey.append("_" + i);
+
+            EDBDocument document = new EDBDocument();
+            EDBStoredField field = new EDBStoredField();
+            field.setStringValue("test_value");
+            document.addField(field);
+            BerkeleyDBStore.INSTANCE.put(documentKey.toString(), document);
+        }
+
+        Long expectedRowsBefore = 100L;
+        Long expectedRowsAfter = 0L;
+        Assert.assertEquals(expectedRowsBefore, BerkeleyDBStore.INSTANCE.totalDocumentStoreRowCount());
+
+        BerkeleyDBStore.INSTANCE.purgeStaleHandle(handle);
+
+        Assert.assertEquals(expectedRowsAfter, BerkeleyDBStore.INSTANCE.totalDocumentStoreRowCount());
     }
 
 }

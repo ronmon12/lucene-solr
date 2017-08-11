@@ -13,6 +13,8 @@ import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.LockMode;
+import com.sleepycat.je.SecondaryConfig;
+import com.sleepycat.je.SecondaryDatabase;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -43,15 +45,24 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
 
     private EnvironmentConfig environmentConfig;
     private Environment environment;
-    private DatabaseConfig databaseConfig;
     private StoredClassCatalog storedClassCatalog;
     private final Properties properties = new Properties();
     private final String PATH_BERKELEYDB_DIRECTORY = "tmp_lucene_embedded_store_directory";
 
-    private Database documentStoreDatabase;
+    private Database catalogDatabase;
+    private DatabaseConfig catalogConfig;
+    private final String DBNAME_CATALOG = "catalog";
     private EntryBinding documentKeyBinding;
     private EntryBinding documentDataBinding;
+    private EntryBinding handleIndexKeyBinding;
+
+    private Database documentStore;
+    private DatabaseConfig databaseConfig;
     private final String DBNAME_DOCUMENT_STORE = "document_store";
+
+    private SecondaryDatabase handleIndex;
+    private SecondaryConfig handleIndexConfig;
+    private final String DBNAME_HANDLE_INDEX = "handle_index";
 
     BerkeleyDBStore() {
         reinitialize();
@@ -79,7 +90,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_EVICTOR, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_IN_COMPRESSOR, "false");
         Logger.LOG(LogLevel.INFO, "Starting Lucene embedded database in testing mode. " +
-                    "Background threads and disk persistence disabled.");
+                    "Background threads disabled.");
         environmentConfig = new EnvironmentConfig(properties);
         environmentConfig.setAllowCreate(true);
 
@@ -100,18 +111,36 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
     }
 
     private void initializeDatabases() {
+
+        catalogConfig = new DatabaseConfig();
+        catalogConfig.setAllowCreate(true);
+        try {
+            catalogDatabase = environment.openDatabase(null, DBNAME_CATALOG, catalogConfig);
+            storedClassCatalog = new StoredClassCatalog(catalogDatabase);
+        } catch (DatabaseException e) {
+            e.printStackTrace();
+        }
+        documentKeyBinding = new SerialBinding(storedClassCatalog, String.class);
+        documentDataBinding = new SerialBinding(storedClassCatalog, EDBDocument.class);
+        handleIndexKeyBinding = new SerialBinding(storedClassCatalog, String.class);
+
         databaseConfig = new DatabaseConfig();
         databaseConfig.setAllowCreate(true);
-
         try {
-            documentStoreDatabase = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
-            storedClassCatalog = new StoredClassCatalog(documentStoreDatabase);
+            documentStore = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to access the requested database from the environment.");
         }
 
-        documentKeyBinding = new SerialBinding(storedClassCatalog, String.class);
-        documentDataBinding = new SerialBinding(storedClassCatalog, EDBDocument.class);
+        handleIndexConfig = new SecondaryConfig();
+        handleIndexConfig.setAllowCreate(true);
+        handleIndexConfig.setSortedDuplicates(true);
+        handleIndexConfig.setKeyCreator(new HandleIndexKeyCreator(documentKeyBinding, handleIndexKeyBinding));
+        try {
+            handleIndex = environment.openSecondaryDatabase(null, DBNAME_HANDLE_INDEX, documentStore, handleIndexConfig);
+        } catch (DatabaseException e) {
+            e.printStackTrace();
+        }
     }
 
     public void put(final String documentKey, final EDBDocument document) {
@@ -122,20 +151,9 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         documentDataBinding.objectToEntry(document, entryData);
 
         try {
-            documentStoreDatabase.put(null, entryKey, entryData);
+            documentStore.put(null, entryKey, entryData);
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the document store.");
-        }
-    }
-
-    public void delete(final String documentKey) {
-        final DatabaseEntry entryKey = new DatabaseEntry();
-        documentKeyBinding.objectToEntry(documentKey, entryKey);
-
-        try {
-            documentStoreDatabase.delete(null, entryKey);
-        } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to delete entry from the document store.");
         }
     }
 
@@ -148,7 +166,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         documentDataBinding.objectToEntry(document, entryData);
 
         try {
-            documentStoreDatabase.get(null, entryKey, entryData, LockMode.DEFAULT);
+            documentStore.get(null, entryKey, entryData, LockMode.DEFAULT);
             document = (EDBDocument) documentDataBinding.entryToObject(entryData);
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to retrieve requested document from document store.");
@@ -156,10 +174,30 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         return document;
     }
 
-    public void close() {
+    public void purgeStaleHandle(final String staleHandle) {
+        final DatabaseEntry entryKey = new DatabaseEntry();
+        handleIndexKeyBinding.objectToEntry(staleHandle, entryKey);
+        try {
+            handleIndex.delete(null, entryKey);
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Failed to delete entry from the handle index.");
+        }
+    }
+
+    public void delete(final String documentKey) {
+        final DatabaseEntry entryKey = new DatabaseEntry();
+        documentKeyBinding.objectToEntry(documentKey, entryKey);
 
         try {
-            documentStoreDatabase.close();
+            documentStore.delete(null, entryKey);
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Failed to delete entry from the document store.");
+        }
+    }
+
+    public void close() {
+        try {
+            documentStore.close();
             environment.close();
             Logger.LOG(LogLevel.INFO, "Releasing resources for embedded database environment.");
         } catch (DatabaseException e) {
@@ -167,19 +205,31 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         }
     }
 
-    public void purge() {
+    public void purgeAllDocuments() {
         try {
-            documentStoreDatabase.close();
+            documentStore.close();
+            handleIndex.close();
             environment.truncateDatabase(null, DBNAME_DOCUMENT_STORE, true);
-            initializeDatabases();
+            reinitialize();
         } catch (DatabaseException e) {
             Logger.LOG(LogLevel.ERROR, "Failed to truncate the document store");
         }
     }
 
-
     Database getStore() {
-        return documentStoreDatabase;
+        return documentStore;
     }
+
+    Long totalDocumentStoreRowCount() {
+        Long rowCount = null;
+        try {
+            rowCount = documentStore.count();
+        } catch (DatabaseException e) {
+            Logger.LOG(LogLevel.ERROR, "Unable to return database row count.");
+        }
+        return rowCount;
+    }
+
+
 
 }
