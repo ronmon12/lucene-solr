@@ -54,10 +54,7 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
             UUID writerUUID = UUID.randomUUID();
             fieldsStream.writeString(writerUUID.toString());
             fieldsStream.close();
-            final StringBuilder handleBuilder = new StringBuilder(writerUUID.toString());
-            handleBuilder.append("_");
-            handleBuilder.append(segment);
-            writerHandle = handleBuilder.toString();
+            writerHandle = writerUUID.toString();
             success = true;
         } finally {
             if (!success) {

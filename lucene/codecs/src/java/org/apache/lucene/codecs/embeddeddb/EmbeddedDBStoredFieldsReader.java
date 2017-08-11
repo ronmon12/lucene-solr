@@ -43,18 +43,16 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     private SegmentInfo si;
     private FieldInfos infos;
     private IOContext context;
-    private String readHandle;
+    private String associatedWriterHandle;
     private IndexInput fieldsStream;
     private boolean closed;
-    private boolean clone = false;
 
     /** Used only by clone. */
-    private EmbeddedDBStoredFieldsReader(FieldInfos fieldInfos, IndexInput fieldsStream, String readHandle, IOContext context) {
+    private EmbeddedDBStoredFieldsReader(FieldInfos fieldInfos, IndexInput fieldsStream, String associatedWriterHandle, IOContext context) {
         this.infos = fieldInfos;
         this.fieldsStream = fieldsStream;
-        this.readHandle = readHandle;
+        this.associatedWriterHandle = associatedWriterHandle;
         this.context = context;
-        clone=true;
     }
 
     /** Main constructor */
@@ -68,12 +66,8 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
 
         try {
             fieldsStream = directory.openInput(IndexFileNames.segmentFileName(si.name, "", FIELDS_EXTENSION), context);
-            final String writerUUID = fieldsStream.readString();
+            associatedWriterHandle = fieldsStream.readString();
             fieldsStream.close();
-            final StringBuilder handleBuilder = new StringBuilder(writerUUID);
-            handleBuilder.append("_");
-            handleBuilder.append(si.name);
-            readHandle = handleBuilder.toString();
             success = true;
         } finally {
             // With lock-less commits, it's entirely possible (and
@@ -93,14 +87,10 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     @Override
     public void visitDocument(int n, StoredFieldVisitor visitor) throws IOException {
 
-        StringBuilder documentKeyBuilder = new StringBuilder(readHandle);
+        StringBuilder documentKeyBuilder = new StringBuilder(associatedWriterHandle);
         documentKeyBuilder.append("_");
         documentKeyBuilder.append(n);
         EDBDocument document = BerkeleyDBStore.INSTANCE.get(documentKeyBuilder.toString());
-
-        if(clone && context.context.equals(IOContext.Context.MERGE)) {
-            BerkeleyDBStore.INSTANCE.delete(documentKeyBuilder.toString());
-        }
 
         for(EDBStoredField field : document.getFields()) {
 
@@ -144,7 +134,7 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
     @Override
     public StoredFieldsReader clone() {
         ensureOpen();
-        return new EmbeddedDBStoredFieldsReader(this.infos, this.fieldsStream, this.readHandle, this.context);
+        return new EmbeddedDBStoredFieldsReader(this.infos, this.fieldsStream, this.associatedWriterHandle, this.context);
     }
 
     /**

@@ -40,9 +40,9 @@ None
 ## Test Failures
 | Test                            | Reason      | Plans       |
 | --------------------------------| ----------- | ----------- |
-| TestFieldsReader.testExceptions | Unsure | Address |
-| TestIndexWriterReader.testAddIndexes | Copying indexes between directories, needs investigation| Address|
-| TestIndexWriterUnicode.testInvalidUTF16 | Need to look into how I'm storing various UTF's | Addressed - Now storing UTF-8 fields |
+| TestFieldsReader.testExceptions | Test expected an I/O exception | Addressed - my fields come from Berkeley, not files, so an IO exception from Directory wouldn't actually be expected|
+| TestIndexWriterReader.testAddIndexes | Copying indexes between directories| Addressed - segment names may not be as important as once thought, UUID takes center stage to fix this test|
+| TestIndexWriterUnicode.testInvalidUTF16 | Need to look into how I'm storing various UTF's | Addressed - Now storing string fields in UTF-8 for consistency |
 | TestIndexFileDeleter.testDeleteLeftoverFiles | Test relies on files| Addressed - Fixed |
 | TestIndexWriterDelete.testErrorInDocsWriterAdd | I don't think this test applies to my codec | Addressed - Fixed |
 | TestIndexWriterMerging.testLucene | Not codec agnostic | Ignore - sanctioned per Caleb |
