@@ -42,7 +42,7 @@ None
 | --------------------------------| ----------- | ----------- |
 | TestFieldsReader.testExceptions | Unsure | Address |
 | TestIndexWriterReader.testAddIndexes | Copying indexes between directories, needs investigation| Address|
-| TestIndexWriterUnicode.testInvalidUTF16 | Need to look into how I'm storing various UTF's | Address |
+| TestIndexWriterUnicode.testInvalidUTF16 | Need to look into how I'm storing various UTF's | Addressed - Now storing UTF-8 fields |
 | TestIndexFileDeleter.testDeleteLeftoverFiles | Test relies on files| Addressed - Fixed |
 | TestIndexWriterDelete.testErrorInDocsWriterAdd | I don't think this test applies to my codec | Addressed - Fixed |
 | TestIndexWriterMerging.testLucene | Not codec agnostic | Ignore - sanctioned per Caleb |

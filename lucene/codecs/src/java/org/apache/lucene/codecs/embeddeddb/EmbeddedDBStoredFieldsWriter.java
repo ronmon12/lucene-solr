@@ -27,6 +27,7 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
+import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 
 /**
@@ -94,7 +95,9 @@ public class EmbeddedDBStoredFieldsWriter extends StoredFieldsWriter {
             edbStoredField.setLength(field.binaryValue().length);
         }
         else if(null != field.stringValue()) {
-            edbStoredField.setStringValue(field.stringValue());
+            final BytesRef fieldBytesRef = new BytesRef(field.stringValue());
+            final String utf8AdjustedField = new String(fieldBytesRef.bytes, fieldBytesRef.offset, fieldBytesRef.length);
+            edbStoredField.setStringValue(utf8AdjustedField);
         }
 
         currentDocument.addField(edbStoredField);
