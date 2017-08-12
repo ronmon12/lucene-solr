@@ -7,7 +7,7 @@ ant compile
 
 2. To test the custom codec, navigate to the lucene directory and run the following ant command with VM arguments:
 
-ant test -Dtests.codec=EmbeddedDB
+ant test -Dtests.codec=EmbeddedDB -Dtests.directory=EDBDirectory
 
 ## Using
 

@@ -19,6 +19,7 @@ package org.apache.lucene.codecs.embeddeddb;
 
 /**
  * Created by rlmathes on 7/29/17.
+ *
  */
 public class BerkeleyDBCoreConstants {
 

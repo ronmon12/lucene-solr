@@ -23,6 +23,9 @@ import org.apache.lucene.codecs.lucene410.Lucene410Codec;
 
 /**
  * Created by rlmathes on 7/15/17.
+ *
+ * Codec which stores document fields within an embedded database
+ *
  */
 public class EmbeddedDBCodec extends FilterCodec {
 

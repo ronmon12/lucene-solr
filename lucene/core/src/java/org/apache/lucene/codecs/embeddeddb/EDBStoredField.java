@@ -22,6 +22,9 @@ import java.io.Serializable;
 
 /**
  * Created by rlmathes on 7/21/17.
+ *
+ *  Representative POJO for a single field within a Lucene document
+ *
  */
 public class EDBStoredField implements Serializable {
 

@@ -17,6 +17,7 @@ package org.apache.lucene.store;
  * limitations under the License.
  */
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,12 +25,19 @@ import org.apache.lucene.codecs.embeddeddb.BerkeleyDBStore;
 
 /**
  * Created by rlmathes on 8/11/17.
+ *
+ * EDBDirectory ensures that as stored field files age and are deleted, their associated rows in the Embedded Database (Berkeley)
+ * are also deleted.
  */
-public class EDBRAMDirectory extends RAMDirectory {
+public class EDBDirectory extends MMapDirectory {
 
     private List<String> handleTombstones = new ArrayList<>();
-
     public static final String FIELDS_EXTENSION = "fdt";
+
+    public EDBDirectory(File path) throws IOException {
+        super(path);
+    }
+
     /** Removes an existing file in the directory.
      * @throws IOException if the file does not exist
      */

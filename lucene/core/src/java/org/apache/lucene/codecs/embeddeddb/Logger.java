@@ -19,6 +19,8 @@ package org.apache.lucene.codecs.embeddeddb;
 
 /**
  * Created by rlmathes on 7/22/17.
+ *
+ * Skeleton class for future simple plain Java logger
  */
 public class Logger {
 

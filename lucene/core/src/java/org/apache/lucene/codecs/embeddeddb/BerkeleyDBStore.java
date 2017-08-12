@@ -36,7 +36,7 @@ import com.sleepycat.je.SecondaryDatabase;
 /**
  * Created by rlmathes on 7/15/17.
  *
- * Singleton class responsible for granting access to an embedded key/value database
+ * Implementation of EmbeddedDBStore that utilizes BerkeleyDB for the storage of Lucene documents
  *
  */
 public enum BerkeleyDBStore implements EmbeddedDBStore{
