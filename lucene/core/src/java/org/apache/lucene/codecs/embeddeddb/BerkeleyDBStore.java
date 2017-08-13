@@ -12,9 +12,11 @@ import com.sleepycat.je.DatabaseEntry;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.EnvironmentStats;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.SecondaryConfig;
 import com.sleepycat.je.SecondaryDatabase;
+import com.sleepycat.je.StatsConfig;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -81,7 +83,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         }
         else if(berkeleyDir.equals("RAM")) {
             properties.put(BerkeleyDBCoreConstants.LOG_MEM_ONLY, "true");
-            Logger.LOG(LogLevel.INFO, "Initializing BerkeleyDB in memory-only mode");
+            Logger.info("Initializing BerkeleyDB in memory-only mode");
         }
 
         //TODO: These properties need to be enabled by default... but how do we disable for tests
@@ -89,7 +91,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_CLEANER, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_EVICTOR, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_IN_COMPRESSOR, "false");
-        Logger.LOG(LogLevel.INFO, "Starting Lucene embedded database in testing mode. " +
+        Logger.info("Starting Lucene embedded database in testing mode. " +
                     "Background threads disabled.");
         environmentConfig = new EnvironmentConfig(properties);
         environmentConfig.setAllowCreate(true);
@@ -97,16 +99,16 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         final File storeFile = new File(berkeleyDir);
         try {
             storeFile.mkdir();
-            Logger.LOG(LogLevel.INFO, "Lucene's BerkeleyDB initialized with directory: " + berkeleyDir);
+            Logger.error("Lucene's BerkeleyDB initialized with directory: " + berkeleyDir);
         }
         catch(SecurityException e) {
-            Logger.LOG(LogLevel.ERROR, "Security violation occurred while trying to create the embedded database directory.");
+            Logger.error("Security violation occurred while trying to create the embedded database directory.");
         }
 
         try {
             environment = new Environment(storeFile, environmentConfig);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Error occurred while trying to create the embedded database environment.");
+            Logger.error("Error occurred while trying to create the embedded database environment.");
         }
     }
 
@@ -129,7 +131,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             documentStore = environment.openDatabase(null, DBNAME_DOCUMENT_STORE, databaseConfig);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to access the requested database from the environment.");
+            Logger.error("Failed to access the requested database from the environment.");
         }
 
         handleIndexConfig = new SecondaryConfig();
@@ -144,7 +146,6 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
     }
 
     public void put(final String documentKey, final EDBDocument document) {
-
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
         documentKeyBinding.objectToEntry(documentKey, entryKey);
@@ -153,12 +154,11 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             documentStore.put(null, entryKey, entryData);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to insert entry into the document store.");
+            Logger.error("Failed to insert entry into the document store.");
         }
     }
 
     public EDBDocument get(final String documentKey) {
-
         EDBDocument document = new EDBDocument();
         final DatabaseEntry entryKey = new DatabaseEntry();
         final DatabaseEntry entryData = new DatabaseEntry();
@@ -169,7 +169,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
             documentStore.get(null, entryKey, entryData, LockMode.DEFAULT);
             document = (EDBDocument) documentDataBinding.entryToObject(entryData);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to retrieve requested document from document store.");
+            Logger.error("Failed to retrieve requested document from document store.");
         }
         return document;
     }
@@ -180,7 +180,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             handleIndex.delete(null, entryKey);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to delete entry from the handle index.");
+            Logger.error("Failed to delete entry from the handle index.");
         }
     }
 
@@ -191,7 +191,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             documentStore.delete(null, entryKey);
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to delete entry from the document store.");
+            Logger.error("Failed to delete entry from the document store.");
         }
     }
 
@@ -199,9 +199,9 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             documentStore.close();
             environment.close();
-            Logger.LOG(LogLevel.INFO, "Releasing resources for embedded database environment.");
+            Logger.info("Releasing resources for embedded database environment.");
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to release resources for embedded database environment.");
+            Logger.error("Failed to release resources for embedded database environment.");
         }
     }
 
@@ -212,7 +212,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
             environment.truncateDatabase(null, DBNAME_DOCUMENT_STORE, true);
             reinitialize();
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Failed to truncate the document store");
+            Logger.error("Failed to truncate the document store");
         }
     }
 
@@ -225,11 +225,21 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         try {
             rowCount = documentStore.count();
         } catch (DatabaseException e) {
-            Logger.LOG(LogLevel.ERROR, "Unable to return database row count.");
+            Logger.error("Unable to return database row count.");
         }
         return rowCount;
     }
 
-
+    public void printBerkeleyInformation() {
+        EnvironmentStats environmentStats = null;
+        try {
+            environmentStats = environment.getStats(StatsConfig.DEFAULT);
+        } catch (DatabaseException e) {
+            Logger.error("Failed to acquire environment statistics.");
+        }
+        Logger.info("Total cache size in bytes: " + environmentStats.getCacheTotalBytes());
+        Logger.info("Total estimated log size: " + environmentStats.getTotalLogSize());
+        Logger.info("Total rows in document store: " + totalDocumentStoreRowCount());
+    }
 
 }

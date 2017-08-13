@@ -122,7 +122,7 @@ public class EmbeddedDBStoredFieldsReader extends StoredFieldsReader{
                     visitor.binaryField(info, Arrays.copyOfRange(field.getBinaryValue(), field.getOffset(), endOffset));
                 }
                 else {
-                    Logger.LOG(LogLevel.WARN, "Field retrieval was attempted, but value was not recognized.");
+                    Logger.warn("Field retrieval was attempted, but value was not recognized.");
                 }
             }
             else if(visitor.needsField(info) == STOP) {

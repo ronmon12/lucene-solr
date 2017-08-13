@@ -17,6 +17,8 @@ package org.apache.lucene.codecs.embeddeddb;
  * limitations under the License.
  */
 
+import java.util.Date;
+
 /**
  * Created by rlmathes on 7/22/17.
  *
@@ -24,7 +26,28 @@ package org.apache.lucene.codecs.embeddeddb;
  */
 public class Logger {
 
-    public static void LOG(final LogLevel level, final String message) {
-        System.out.println(level + " message logged: " + message);
+    public static void error(final String message) {
+        Date currentDate = new Date(System.currentTimeMillis());
+        System.out.println(currentDate.toString() + " ERROR message: " + message);
     }
+
+    public static void warn(final String message) {
+        Date currentDate = new Date(System.currentTimeMillis());
+        System.out.println(currentDate.toString() + " WARN message: " + message);
+    }
+
+    public static void info(final String message) {
+        Date currentDate = new Date(System.currentTimeMillis());
+        System.out.println(currentDate.toString() + " INFO message: " + message);
+    }
+    public static void debug(final String message) {
+        Date currentDate = new Date(System.currentTimeMillis());
+        System.out.println(currentDate.toString() + " DEBUG message: " + message);
+    }
+
+    public static void trace(final String message) {
+        Date currentDate = new Date(System.currentTimeMillis());
+        System.out.println(currentDate.toString() + " TRACE message: " + message);
+    }
+
 }
