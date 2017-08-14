@@ -28,4 +28,5 @@ public class BerkeleyDBCoreConstants {
     static final String ENV_RUN_CLEANER = "je.env.runCleaner";
     static final String ENV_RUN_EVICTOR = "je.env.runEvictor";
     static final String LOG_MEM_ONLY = "je.log.memOnly";
+    static final String MAX_MEMORY_PERCENT = "je.maxMemoryPercent";
 }

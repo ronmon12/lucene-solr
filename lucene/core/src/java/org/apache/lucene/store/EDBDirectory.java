@@ -54,6 +54,5 @@ public class EDBDirectory extends RAMDirectory {
             BerkeleyDBStore.INSTANCE.purgeStaleHandle(staleHandle);
         }
         super.close();
-        BerkeleyDBStore.INSTANCE.printBerkeleyInformation();
     }
 }

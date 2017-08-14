@@ -91,10 +91,12 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_CLEANER, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_EVICTOR, "false");
         properties.put(BerkeleyDBCoreConstants.ENV_RUN_IN_COMPRESSOR, "false");
+        properties.put(BerkeleyDBCoreConstants.MAX_MEMORY_PERCENT, "30");
         Logger.info("Starting Lucene embedded database in testing mode. " +
                     "Background threads disabled.");
         environmentConfig = new EnvironmentConfig(properties);
         environmentConfig.setAllowCreate(true);
+        Logger.info("BerkeleyDB cache authorized to use " + environmentConfig.getCachePercent() + "% of the JVM RAM");
 
         final File storeFile = new File(berkeleyDir);
         try {
