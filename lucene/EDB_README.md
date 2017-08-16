@@ -1,21 +1,22 @@
 ## Build and Testing
 
-1. This project can be built using the following command; Maven
-Ant must be installed and available in your path:
+1. Ensure Ant is installed and available in your path
 
-ant compile
+2. Build the project with the following command
 
-2. To test the custom codec, navigate to the lucene directory and run the following ant command with VM arguments:
+`ant clean compile`
 
-ant test -Dtests.codec=EmbeddedDB -Dtests.directory=EDBDirectory
+3. To test the EmbeddedDB codec, navigate to the Lucene directory and run the following ant command with VM arguments:
+
+`ant test -Dtests.codec=EmbeddedDB -Dtests.directory=EDBDirectory`
 
 ## Using
 
-Two new program arguments are offered for Lucene:
+Available VM arguments for EmbeddedDB codec
 
 | Program Argument                     | Description |
 | ------------------------------------ | ----------- |
-| -DberkeleyDir    | Specify an output directory for the embedded database, if not specified a default directory will be made. If keyword "RAM" is specified, BerkeleyDB will run in-memory only |
+| -DberkeleyDir    | Specify an output directory for the BerkeleyDB embedded database, if not specified a default directory will be made. If keyword "RAM" is specified, BerkeleyDB will run in-memory only |
 
 ## Todo List
 [x] Clone lucene-solr project in my space and create new branch

@@ -25,6 +25,7 @@ import java.util.List;
  * Created by rlmathes on 7/27/17.
  *
  * Representative POJO for a Lucene Document and it's associated fields
+ *
  */
 public class EDBDocument implements Serializable {
 

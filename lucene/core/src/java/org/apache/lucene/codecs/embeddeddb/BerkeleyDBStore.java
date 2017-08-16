@@ -101,7 +101,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         final File storeFile = new File(berkeleyDir);
         try {
             storeFile.mkdir();
-            Logger.error("Lucene's BerkeleyDB initialized with directory: " + berkeleyDir);
+            Logger.info("Lucene's BerkeleyDB initialized with directory: " + berkeleyDir);
         }
         catch(SecurityException e) {
             Logger.error("Security violation occurred while trying to create the embedded database directory.");
@@ -189,7 +189,6 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
     public void delete(final String documentKey) {
         final DatabaseEntry entryKey = new DatabaseEntry();
         documentKeyBinding.objectToEntry(documentKey, entryKey);
-
         try {
             documentStore.delete(null, entryKey);
         } catch (DatabaseException e) {
@@ -207,7 +206,7 @@ public enum BerkeleyDBStore implements EmbeddedDBStore{
         }
     }
 
-    public void purgeAllDocuments() {
+    void purgeAllDocuments() {
         try {
             documentStore.close();
             handleIndex.close();

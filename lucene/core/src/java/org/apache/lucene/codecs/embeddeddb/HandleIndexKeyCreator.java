@@ -27,6 +27,7 @@ import com.sleepycat.je.SecondaryKeyCreator;
  *
  * SecondaryKeyCreator for use in BerkeleyDBStore. This KeyCreator allows a secondary index to be built on top of
  * the document store key in BerkeleyDBStore.
+ *
  */
 class HandleIndexKeyCreator implements SecondaryKeyCreator {
 
