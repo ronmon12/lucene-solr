@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.lucene.codecs.embeddeddb.BerkeleyDBStore;
+import org.apache.lucene.codecs.embeddeddb.Logger;
 
 /**
  * Created by rlmathes on 8/11/17.
@@ -40,9 +41,16 @@ public class EDBDirectory extends RAMDirectory {
     public void deleteFile(String name) throws IOException {
         if(name.contains(FIELDS_EXTENSION)) {
             IndexInput fieldsStream = this.openInput(name, IOContext.DEFAULT);
-            final String staleHandle = fieldsStream.readString();
+            String staleHandle = null;
+            try {
+                staleHandle = fieldsStream.readString();
+                handleTombstones.add(staleHandle);
+            }
+            catch(IOException e) {
+                //Log message disabled due to log flooding, need to make trace or debug message
+                //Logger.error("Unable to read handle from stale fields file.");
+            }
             fieldsStream.close();
-            handleTombstones.add(staleHandle);
         }
         super.deleteFile(name);
     }
