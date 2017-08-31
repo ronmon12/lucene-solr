@@ -15,3 +15,4 @@
 
 org.apache.lucene.codecs.simpletext.SimpleTextCodec
 org.apache.lucene.codecs.appending.AppendingCodec
+org.apache.lucene.codecs.embeddeddb.EmbeddedDBCodec
